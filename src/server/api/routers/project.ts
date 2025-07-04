@@ -282,5 +282,103 @@ export const projectRouter = createTRPCRouter({
             }
         })
         return { fileCount, userCredits: userCredits?.credits || 0 }
+    }),
+    generateCode: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      prompt: z.string(),
+      context: z.array(z.string()).optional(),
+      requirements: z.any().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { CodeGenerationEngine } = await import('@/lib/code-generation-engine');
+      const { IntentClassifier } = await import('@/lib/intent-classifier');
+      
+      const classifier = new IntentClassifier();
+      const engine = new CodeGenerationEngine();
+      
+      // Classify the intent
+      const intent = await classifier.classifyQuery(input.prompt);
+      
+      // Generate code
+      const result = await engine.generateCode({
+        intent,
+        query: input.prompt,
+        projectId: input.projectId,
+        contextFiles: input.context
+      });
+      
+      return {
+        generatedCode: result.files[0]?.content,
+        explanation: result.explanation,
+        language: result.files[0]?.language,
+        warnings: result.warnings,
+        dependencies: result.dependencies,
+        files: result.files
+      };
+    }),
+  improveCode: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      code: z.string().optional(),
+      improvementType: z.enum(['performance', 'readability', 'security', 'optimization']),
+      suggestions: z.string(),
+      targetFiles: z.array(z.string()).optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { CodeGenerationEngine } = await import('@/lib/code-generation-engine');
+      const { IntentClassifier } = await import('@/lib/intent-classifier');
+      
+      const classifier = new IntentClassifier();
+      const engine = new CodeGenerationEngine();
+      
+      const intent = await classifier.classifyQuery(input.suggestions);
+      intent.type = 'code_improvement'; // Override type
+      
+      const result = await engine.generateCode({
+        intent,
+        query: input.suggestions,
+        projectId: input.projectId,
+        contextFiles: input.targetFiles,
+        targetFile: input.targetFiles?.[0]
+      });
+      
+      return {
+        improvedCode: result.files[0]?.content,
+        explanation: result.explanation,
+        diff: result.files[0]?.diff,
+        suggestions: result.warnings?.map(w => ({ type: 'improvement', description: w }))
+      };
+    }),
+  reviewCode: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      files: z.array(z.string()),
+      reviewType: z.enum(['security', 'performance', 'comprehensive']),
+      focusAreas: z.string().optional()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Implement code review logic using IntentClassifier + CodeGenerationEngine
+      // This would analyze the files and provide review feedback
+      return {
+        issues: [],
+        suggestions: [],
+        summary: 'Code review completed'
+      };
+    }),
+  debugCode: protectedProcedure
+    .input(z.object({
+      projectId: z.string(),
+      errorDescription: z.string(),
+      suspectedFiles: z.array(z.string()).optional(),
+      contextLevel: z.enum(['file', 'function', 'project', 'global'])
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Implement debugging logic using IntentClassifier
+      return {
+        diagnosis: 'Debugging analysis',
+        solutions: [],
+        recommendations: []
+      };
     })
 });

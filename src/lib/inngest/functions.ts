@@ -3,6 +3,7 @@ import { inngest } from "./client";
 import { loadGithubRepo } from "@/lib/github-loader";
 import { summariseCode, generateEmbedding } from "@/lib/gemini";
 import { checkTranscriptionStatus, retrieveTranscriptionResults, submitMeetingForProcessing } from "@/lib/assembly";
+import { SmartReindexer } from "@/lib/smart-reindexer";
 import { db } from "@/server/db";
 import type { CommitProcessingStatus } from "@prisma/client";
 
@@ -20,7 +21,7 @@ export type MeetingStatus =
   | "COMPLETED"
   | "FAILED";
 
-// Updated processProjectCreation with separate commit processing
+// PROJECT CREATION FUNCTIONS
 
 export const processProjectCreation = inngest.createFunction(
   { 
@@ -241,7 +242,8 @@ export const processProjectCreation = inngest.createFunction(
   }
 );
 
-// NEW: Separate function to process individual commits with wave processing
+// COMMIT PROCESSING FUNCTIONS
+
 export const processSingleCommit = inngest.createFunction(
   {
     id: "aetheria-process-single-commit",
@@ -437,8 +439,271 @@ export const processSingleCommit = inngest.createFunction(
   }
 );
 
+// WEBHOOK-TRIGGERED FUNCTIONS (NEW)
 
-// MEETING PROCESSING 
+export const processSmartReindexing = inngest.createFunction(
+  {
+    id: "aetheria-smart-reindex",
+    name: "Smart Re-index Changed Files",
+    retries: 1,
+    concurrency: {
+      limit: 3,
+      key: "event.data.projectId"
+    }
+  },
+  { event: "project.smart.reindex.requested" },
+  async ({ event, step }) => {
+    const { projectId, githubUrl, changedFiles, commitHash, reason } = event.data;
+
+    try {
+      console.log(`🔄 Smart re-indexing ${changedFiles.length} files for project ${projectId} (reason: ${reason})`);
+
+      // Step 1: Initialize smart reindexer
+      const reindexer = await step.run("initialize-reindexer", async () => {
+        // Get project's GitHub token if available
+        const project = await db.project.findUnique({
+          where: { id: projectId },
+          include: {
+            userToProjects: {
+              take: 1,
+              include: { user: true }
+            }
+          }
+        });
+
+        if (!project) {
+          throw new Error(`Project ${projectId} not found`);
+        }
+
+        return new SmartReindexer(process.env.GITHUB_TOKEN);
+      });
+
+      // Step 2: Re-index changed files
+      const results = await step.run("reindex-files", async () => {
+        return await reindexer.reindexChangedFiles(projectId, githubUrl, changedFiles);
+      });
+
+      // Step 3: Update project logs
+      await step.run("update-logs", async () => {
+        const existingProject = await db.project.findUnique({
+          where: { id: projectId },
+          select: { processingLogs: true }
+        });
+
+        const existingLogs = existingProject?.processingLogs || {};
+
+        await db.project.update({
+          where: { id: projectId },
+          data: {
+            processingLogs: {
+              ...existingLogs,
+              lastReindex: {
+                timestamp: new Date().toISOString(),
+                commitHash,
+                reason,
+                changedFiles,
+                results,
+                filesProcessed: results.filter(r => r.status === 'reindexed').length,
+                filesRemoved: results.filter(r => r.status === 'removed').length,
+                errors: results.filter(r => r.status === 'error').length
+              }
+            }
+          }
+        });
+
+        return results;
+      });
+
+      console.log(`✅ Smart re-indexing completed for project ${projectId}`);
+      return { 
+        success: true, 
+        projectId, 
+        filesProcessed: results.filter(r => r.status === 'reindexed').length,
+        filesRemoved: results.filter(r => r.status === 'removed').length,
+        errors: results.filter(r => r.status === 'error').length
+      };
+
+    } catch (error) {
+      console.error(`❌ Smart re-indexing failed for project ${projectId}:`, error);
+      throw error;
+    }
+  }
+);
+
+export const processFileChanges = inngest.createFunction(
+  {
+    id: "aetheria-process-file-changes",
+    name: "Process File Changes from Webhook",
+    retries: 1,
+    concurrency: {
+      limit: 5,
+      key: "event.data.projectId"
+    }
+  },
+  { event: "project.files.reindex.requested" },
+  async ({ event, step }) => {
+    const { projectId, files, githubUrl, reason } = event.data;
+
+    try {
+      console.log(`📁 Processing ${files.length} file changes for project ${projectId} (reason: ${reason})`);
+
+      // Step 1: Process files in batches
+      const BATCH_SIZE = 3;
+      const results = [];
+
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+        
+        const batchResults = await step.run(`process-file-batch-${Math.floor(i / BATCH_SIZE)}`, async () => {
+          const reindexer = new SmartReindexer(process.env.GITHUB_TOKEN);
+          return await reindexer.reindexChangedFiles(projectId, githubUrl, batch);
+        });
+
+        results.push(...batchResults);
+
+        // Small delay between batches
+        if (i + BATCH_SIZE < files.length) {
+          await step.sleep("batch-delay", "2s");
+        }
+      }
+
+      console.log(`✅ File changes processed for project ${projectId}`);
+      return { 
+        success: true, 
+        projectId, 
+        totalFiles: files.length,
+        results
+      };
+
+    } catch (error) {
+      console.error(`❌ File changes processing failed for project ${projectId}:`, error);
+      throw error;
+    }
+  }
+);
+
+export const analyzePullRequest = inngest.createFunction(
+  {
+    id: "aetheria-analyze-pull-request",
+    name: "Analyze Pull Request",
+    retries: 1,
+    concurrency: {
+      limit: 3,
+      key: "event.data.projectId"
+    }
+  },
+  { event: "pullrequest.analysis.requested" },
+  async ({ event, step }) => {
+    const { 
+      projectId, 
+      prNumber, 
+      action, 
+      title, 
+      state, 
+      merged, 
+      baseBranch, 
+      headBranch, 
+      githubUrl 
+    } = event.data;
+
+    try {
+      console.log(`🔍 Analyzing PR #${prNumber} for project ${projectId} (action: ${action})`);
+
+      // Step 1: Analyze PR impact
+      const analysis = await step.run("analyze-pr-impact", async () => {
+        // This is where you could implement PR analysis logic
+        // For now, we'll create a basic analysis structure
+        return {
+          prNumber,
+          action,
+          title,
+          state,
+          merged,
+          baseBranch,
+          headBranch,
+          riskLevel: 'medium', // Could be calculated based on changes
+          affectedFiles: [], // Could be extracted from PR diff
+          recommendations: []
+        };
+      });
+
+      // Step 2: Store PR analysis (if you have a PRAnalysis table)
+      await step.run("store-analysis", async () => {
+        // You could store PR analysis results in the database here
+        console.log(`PR analysis completed for #${prNumber}:`, analysis);
+        return analysis;
+      });
+
+      return { success: true, projectId, analysis };
+
+    } catch (error) {
+      console.error(`❌ PR analysis failed for project ${projectId}, PR #${prNumber}:`, error);
+      throw error;
+    }
+  }
+);
+
+export const processRelease = inngest.createFunction(
+  {
+    id: "aetheria-process-release",
+    name: "Process Release Events",
+    retries: 1,
+    concurrency: {
+      limit: 2,
+      key: "event.data.projectId"
+    }
+  },
+  { event: "project.release.analysis.requested" },
+  async ({ event, step }) => {
+    const { projectId, releaseAction, releaseName, releaseTag, githubUrl } = event.data;
+
+    try {
+      console.log(`🚀 Processing release event for project ${projectId}: ${releaseAction} - ${releaseName}`);
+
+      // Step 1: Analyze release impact
+      const analysis = await step.run("analyze-release", async () => {
+        // Implement release analysis logic here
+        return {
+          releaseAction,
+          releaseName,
+          releaseTag,
+          timestamp: new Date().toISOString()
+        };
+      });
+
+      // Step 2: Update project with release info
+      await step.run("update-project-release-info", async () => {
+        const existingProject = await db.project.findUnique({
+          where: { id: projectId },
+          select: { processingLogs: true }
+        });
+
+        const existingLogs = existingProject?.processingLogs || {};
+
+        await db.project.update({
+          where: { id: projectId },
+          data: {
+            processingLogs: {
+              ...existingLogs,
+              lastRelease: analysis
+            }
+          }
+        });
+
+        return analysis;
+      });
+
+      return { success: true, projectId, analysis };
+
+    } catch (error) {
+      console.error(`❌ Release processing failed for project ${projectId}:`, error);
+      throw error;
+    }
+  }
+);
+
+// MEETING PROCESSING (EXISTING)
+
 export const processMeetingFunction = inngest.createFunction(
   {
     id: "aetheria-process-meeting",
@@ -650,9 +915,18 @@ export const processMeetingFunction = inngest.createFunction(
   }
 );
 
-// Export all functions
+// Export all functions in a flat array
 export const functions = [
+  // Project Creation
   processProjectCreation, 
   processSingleCommit,
+  
+  // Webhook-triggered functions
+  processSmartReindexing,
+  processFileChanges,
+  analyzePullRequest,
+  processRelease,
+  
+  // Meeting Processing
   processMeetingFunction
 ];

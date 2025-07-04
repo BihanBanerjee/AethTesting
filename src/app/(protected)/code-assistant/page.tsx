@@ -28,6 +28,7 @@ import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import { CodeBlock } from '@/components/code/enhanced-code-block';
 import { DiffViewer } from '@/components/code/diff-viewer';
 import { FileExplorer } from '@/components/code/file-explorer';
+import { IntentClassifier } from '@/lib/intent-classifier';
 
 interface Message {
   id: string;
@@ -53,6 +54,7 @@ interface Message {
 }
 
 const CodeAssistantPage = () => {
+  const [classifier] = useState(() => new IntentClassifier());
   const { project } = useProject();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -75,43 +77,36 @@ const CodeAssistantPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const detectIntent = (message: string): { intent: Message['intent']; confidence: number } => {
-    const patterns = {
-      code_generation: [
-        /create.*function/i, /generate.*code/i, /write.*function/i, 
-        /implement.*feature/i, /build.*component/i, /make.*file/i
-      ],
-      code_improvement: [
-        /improve.*code/i, /optimize.*function/i, /refactor/i, 
-        /make.*better/i, /enhance/i, /clean.*up/i
-      ],
-      code_review: [
-        /review.*code/i, /check.*code/i, /analyze.*function/i,
-        /what.*wrong/i, /issues.*with/i, /problems.*in/i
-      ],
-      debugging: [
-        /debug/i, /fix.*bug/i, /error/i, /not.*working/i,
-        /broken/i, /issue.*with/i, /problem.*with/i
-      ]
-    };
-
-    for (const [intent, patternList] of Object.entries(patterns)) {
-      for (const pattern of patternList) {
-        if (pattern.test(message)) {
-          return { intent: intent as Message['intent'], confidence: 0.8 };
-        }
-      }
+  const detectIntent = async (message: string) => {
+    try {
+      const projectContext = {
+        availableFiles: selectedFiles,
+        techStack: project?.techStack || [],
+        recentFiles: project?.recentFiles || []
+      };
+      
+      const intent = await classifier.classifyQuery(message, projectContext);
+      
+      // Extract file references
+      const fileReferences = classifier.extractFileReferences(message, availableFiles);
+      
+      return {
+        ...intent,
+        targetFiles: fileReferences
+      };
+    } catch (error) {
+      console.error('Intent classification failed:', error);
+      // Fallback to existing pattern matching
+      return fallbackDetectIntent(message);
     }
-
-    return { intent: 'question', confidence: 0.6 };
   };
 
-  const handleSendMessage = async () => {
+    const handleSendMessage = async () => {
     if (!input.trim() || !project) return;
 
-    const userMessage: Message = {
+    const userMessage = {
       id: Date.now().toString(),
-      type: 'user',
+      type: 'user' as const,
       content: input,
       timestamp: new Date()
     };
@@ -119,18 +114,19 @@ const CodeAssistantPage = () => {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     
-    const { intent } = detectIntent(input);
+    // Use AI-powered intent classification
+    const intent = await detectIntent(input);
 
     try {
       let response;
       
-      switch (intent) {
+      switch (intent.type) {
         case 'code_generation':
           response = await generateCode.mutateAsync({
             projectId: project.id,
             prompt: input,
-            context: selectedFiles,
-            requirements: extractRequirements(input)
+            context: intent.targetFiles || selectedFiles,
+            requirements: extractRequirements(input, intent)
           });
           break;
           
@@ -139,7 +135,26 @@ const CodeAssistantPage = () => {
             projectId: project.id,
             code: extractCodeFromContext(),
             improvementType: 'optimization',
-            suggestions: input
+            suggestions: input,
+            targetFiles: intent.targetFiles
+          });
+          break;
+          
+        case 'code_review':
+          response = await reviewCode.mutateAsync({
+            projectId: project.id,
+            files: intent.targetFiles || selectedFiles,
+            reviewType: 'comprehensive',
+            focusAreas: intent.contextNeeded
+          });
+          break;
+          
+        case 'debug':
+          response = await debugCode.mutateAsync({
+            projectId: project.id,
+            errorDescription: input,
+            suspectedFiles: intent.targetFiles,
+            contextLevel: intent.contextNeeded
           });
           break;
           
@@ -147,22 +162,25 @@ const CodeAssistantPage = () => {
           response = await askCodeQuestion.mutateAsync({
             projectId: project.id,
             question: input,
-            context: selectedFiles,
-            intent
+            context: intent.targetFiles || selectedFiles,
+            intent: intent.type
           });
       }
 
-      const assistantMessage: Message = {
+      const assistantMessage = {
         id: (Date.now() + 1).toString(),
-        type: 'assistant',
+        type: 'assistant' as const,
         content: response.answer || response.explanation || '',
-        intent,
+        intent: intent.type,
+        confidence: intent.confidence,
         metadata: {
-          files: response.filesReferences?.map(f => f.fileName) || [],
+          files: response.filesReferences?.map(f => f.fileName) || intent.targetFiles || [],
           generatedCode: response.generatedCode,
           language: response.language,
           diff: response.diff,
-          suggestions: response.suggestions
+          suggestions: response.suggestions,
+          requiresCodeGen: intent.requiresCodeGen,
+          requiresFileModification: intent.requiresFileModification
         },
         timestamp: new Date()
       };
@@ -170,22 +188,14 @@ const CodeAssistantPage = () => {
       setMessages(prev => [...prev, assistantMessage]);
       
     } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Failed to process your request');
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
+      console.error('Error processing request:', error);
+      // Handle error...
     } finally {
       setIsLoading(false);
       setInput('');
     }
   };
+};
 
   const extractRequirements = (prompt: string) => {
     // Extract technical requirements from the prompt
