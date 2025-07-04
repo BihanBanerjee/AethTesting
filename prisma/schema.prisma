@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+    previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+    extensions = [vector]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  emailAddress String    @unique
+  firstName    String?
+  lastName     String?
+  imageUrl     String?
+  credits      Int       @default(150)
+  userToProjects UserToProject[]
+  questionsAsked Question[]
+
+  stripeTransactions StripeTransction[]
+}
+
+enum ProjectStatus {
+  INITIALIZING
+  LOADING_REPO        // Add this new status
+  INDEXING_REPO
+  POLLING_COMMITS
+  DEDUCTING_CREDITS
+  COMPLETED
+  FAILED
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  name         String
+  githubUrl    String
+
+  status       ProjectStatus @default(INITIALIZING)
+  processingLogs Json?        // Store processing logs as JSON
+  totalFiles   Int?          // Store total file count
+  processedFiles Int?        // Store processed file count
+
+  deletedAt    DateTime?
+  userToProjects UserToProject[]
+  commits      Commit[]
+  sourceCodeEmbeddings SourceCodeEmbedding[]
+  savedQuestions Question[]
+  meetings         Meeting[]
+}
+
+model UserToProject {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  userId       String
+  projectId    String
+
+  user         User      @relation(fields: [userId], references: [id])
+  project      Project   @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+
+}
+
+model SourceCodeEmbedding {
+  id           String    @id @default(cuid())
+
+  summaryEmbedding Unsupported("Vector(768)")?
+  sourceCode   String
+  fileName     String
+  summary      String
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+}
+
+enum MeetingStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Meeting {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  
+  meetingUrl   String //firebase storage url
+  
+  name         String
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+  status       MeetingStatus  @default(PROCESSING)
+  issues       Issue[]
+}
+
+model Issue {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  start       String
+  end         String
+  gist        String
+  headline    String
+  summary     String
+
+  meetingId    String
+  meeting      Meeting   @relation(fields: [meetingId], references: [id])
+}
+
+model Question {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  question     String
+  answer       String
+
+  filesReferences Json?
+  projectId     String
+
+  project      Project   @relation(fields: [projectId], references: [id])
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+}
+
+enum CommitProcessingStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+model Commit {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+
+  commitMessage String
+  commitHash    String
+  commitAuthorName String
+  commitAuthorAvatar String
+  commitDate    String
+
+  //ai summary
+  summary String
+  
+  // NEW: Processing status field
+  processingStatus CommitProcessingStatus @default(COMPLETED)
+  
+  // NEW: Unique constraint for upsert operations
+  @@unique([projectId, commitHash], name: "projectId_commitHash")
+}
+
+model StripeTransction {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+
+  credits      Int      
+}
