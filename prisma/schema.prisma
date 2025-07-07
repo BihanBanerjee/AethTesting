@@ -80,8 +80,8 @@ model UserToProject {
 
 model SourceCodeEmbedding {
   id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now()) // Add missing timestamp
-  updatedAt    DateTime  @updatedAt      // Add missing timestamp
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   summaryEmbedding Unsupported("Vector(768)")?
   sourceCode   String
