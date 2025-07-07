@@ -17,32 +17,32 @@ export class IntentClassifier {
   
   async classifyQuery(query: string, projectContext?: any): Promise<QueryIntent> {
     const prompt = `
-Analyze this user query and classify the intent. Consider the context of a software development project.
+      Analyze this user query and classify the intent. Consider the context of a software development project.
 
-Query: "${query}"
+      Query: "${query}"
 
-Project Context: ${projectContext ? JSON.stringify(projectContext, null, 2) : 'No specific context'}
+      Project Context: ${projectContext ? JSON.stringify(projectContext, null, 2) : 'No specific context'}
 
-Classify the intent as one of:
-1. question - User wants information about existing code
-2. code_generation - User wants new code to be written
-3. code_improvement - User wants existing code to be optimized or enhanced
-4. code_review - User wants code to be reviewed for issues
-5. refactor - User wants code structure to be changed while preserving functionality
-6. debug - User wants help fixing bugs or errors
-7. explain - User wants detailed explanation of how code works
+      Classify the intent as one of:
+      1. question - User wants information about existing code
+      2. code_generation - User wants new code to be written
+      3. code_improvement - User wants existing code to be optimized or enhanced
+      4. code_review - User wants code to be reviewed for issues
+      5. refactor - User wants code structure to be changed while preserving functionality
+      6. debug - User wants help fixing bugs or errors
+      7. explain - User wants detailed explanation of how code works
 
-Respond with ONLY a JSON object in this format:
-{
-  "type": "intent_type",
-  "confidence": 0.85,
-  "targetFiles": ["file1.ts", "file2.ts"],
-  "requiresCodeGen": true,
-  "requiresFileModification": false,
-  "contextNeeded": "file|function|project|global",
-  "reasoning": "Brief explanation of classification"
-}
-`;
+      Respond with ONLY a JSON object in this format:
+      {
+        "type": "intent_type",
+        "confidence": 0.85,
+        "targetFiles": ["file1.ts", "file2.ts"],
+        "requiresCodeGen": true,
+        "requiresFileModification": false,
+        "contextNeeded": "file|function|project|global",
+        "reasoning": "Brief explanation of classification"
+      }
+    `;
 
     try {
       const result = await model.generateContent([prompt]);
