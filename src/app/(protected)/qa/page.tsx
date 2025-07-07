@@ -8,10 +8,11 @@ import useProject from '@/hooks/use-project';
 import { api } from '@/trpc/react';
 
 // Import components
-import AskQuestionCard from '../dashboard/ask-question-card';
+// import AskQuestionCard from '../dashboard/ask-question-card';
 import QuestionCard from './components/question-card/question-card';
 import QuestionDetail from './components/question-detail/question-detail';
 import ScrollbarStyles from './components/scrollbar-styles';
+import EnhancedAskQuestionCard from '../dashboard/ask-question-card';
 
 const QAPage: React.FC = () => {
   const { projectId } = useProject();
@@ -52,7 +53,7 @@ const QAPage: React.FC = () => {
 
   return (
     <>
-      <AskQuestionCard />
+      <EnhancedAskQuestionCard />
       
       <div className='h-6'></div>
       <div className='flex items-center justify-between mb-6'>

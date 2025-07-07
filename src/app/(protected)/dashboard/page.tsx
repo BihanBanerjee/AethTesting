@@ -6,13 +6,14 @@ import { ExternalLink, Github } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react'
 import CommitLog from './commit-log';
-import AskQuestionCard from './ask-question-card';
+// import AskQuestionCard from './ask-question-card';
 import MeetingCard from './meeting-card';
 import ArchiveButton from './archive-button';
 import TeamMembers from './team-members';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import dynamic from 'next/dynamic';
 import ProjectQueue from './project-queue'; // Add this import
+import EnhancedAskQuestionCard from './ask-question-card';
 
 const InviteButton = dynamic(() => import('./invite-button'), {
   ssr: false
@@ -50,7 +51,7 @@ const DashboardPage = () => {
 
       <div className="mt-6">
         <div className='grid grid-cols-1 gap-6 sm:grid-cols-5'>
-          <AskQuestionCard />
+          <EnhancedAskQuestionCard />
           <MeetingCard />
         </div>
       </div>
