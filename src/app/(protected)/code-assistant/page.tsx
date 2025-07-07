@@ -1,4 +1,4 @@
-// src/app/(protected)/code-assistant/page.tsx - Enhanced Version
+// src/app/(protected)/code-assistant/page.tsx - Integrated Version
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -23,15 +23,25 @@ import {
   Bug,
   Search,
   Sparkles,
-  Wrench
+  Wrench,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import useProject from '@/hooks/use-project';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
+
+// Import the isolated components
+import { CodeGenerationPanel } from '@/components/code/code-generation-panel';
+import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
+import { IntentClassifierProvider, useIntentClassifier } from '@/components/code-assistant/intent-classifier-wrapper';
+import { IntentProgressTracker } from '@/components/code-assistant/intent-progress-tracker';
+import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
 import { CodeBlock } from '@/components/code/enhanced-code-block';
 import { DiffViewer } from '@/components/code/diff-viewer';
-import { FileExplorer } from '@/components/code/file-explorer';
 
 interface Message {
   id: string;
@@ -60,13 +70,22 @@ interface Message {
   timestamp: Date;
 }
 
-const CodeAssistantPage = () => {
+// Main component wrapped with providers
+const CodeAssistantPageContent = () => {
   const { project } = useProject();
+  const { classifyQuery, isReady } = useIntentClassifier();
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<'chat' | 'files' | 'history'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'generation' | 'files'>('chat');
+  const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  
+  // Processing states
+  const [currentIntent, setCurrentIntent] = useState<string>('');
+  const [processingStage, setProcessingStage] = useState<'analyzing' | 'processing' | 'generating' | 'complete' | 'error'>('complete');
+  const [progress, setProgress] = useState(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -77,8 +96,18 @@ const CodeAssistantPage = () => {
   const improveCode = api.project.improveCode.useMutation();
   const reviewCode = api.project.reviewCode.useMutation();
   const debugCode = api.project.debugCode.useMutation();
-  const refactorCode = api.project.refactorCode.useMutation();
   const explainCode = api.project.explainCode.useMutation();
+
+  // Get available files
+  const { data: projectFiles } = api.project.getProjectFiles?.useQuery(
+    { projectId: project?.id || '' },
+    { 
+      enabled: !!project?.id,
+      onSuccess: (data) => {
+        setAvailableFiles(data?.map(f => f.fileName) || []);
+      }
+    }
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -102,27 +131,34 @@ const CodeAssistantPage = () => {
     setIsLoading(true);
     
     try {
-      let response;
+      // Step 1: Classify intent
+      setProcessingStage('analyzing');
+      setProgress(10);
       
-      // First, classify the intent
-      const classificationResult = await askQuestion.mutateAsync({
-        projectId: project.id,
-        query: input,
-        contextFiles: selectedFiles,
-        classifyOnly: true
+      const intent = await classifyQuery(input, { 
+        availableFiles,
+        selectedFiles 
       });
-
-      const intent = classificationResult.intent;
       
-      // Route to appropriate handler based on intent
+      setCurrentIntent(intent.type);
+      setProgress(30);
+
+      let response;
+      setProcessingStage('processing');
+      setProgress(50);
+
+      // Step 2: Route to appropriate handler based on intent
       switch (intent.type) {
         case 'code_generation':
+          setProcessingStage('generating');
+          setProgress(70);
+          
           response = await generateCode.mutateAsync({
             projectId: project.id,
             prompt: input,
-            context: intent.targetFiles || selectedFiles,
+            context: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             requirements: {
-              framework: 'react', // Could be detected from project
+              framework: 'react',
               language: 'typescript',
               features: extractFeatures(input),
               constraints: extractConstraints(input)
@@ -134,7 +170,7 @@ const CodeAssistantPage = () => {
           response = await improveCode.mutateAsync({
             projectId: project.id,
             suggestions: input,
-            targetFiles: intent.targetFiles || selectedFiles,
+            targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             improvementType: detectImprovementType(input)
           });
           break;
@@ -142,7 +178,7 @@ const CodeAssistantPage = () => {
         case 'code_review':
           response = await reviewCode.mutateAsync({
             projectId: project.id,
-            files: intent.targetFiles || selectedFiles,
+            files: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles || [],
             reviewType: detectReviewType(input),
             focusAreas: input
           });
@@ -152,17 +188,8 @@ const CodeAssistantPage = () => {
           response = await debugCode.mutateAsync({
             projectId: project.id,
             errorDescription: input,
-            suspectedFiles: intent.targetFiles || selectedFiles,
+            suspectedFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             contextLevel: intent.contextNeeded || 'project'
-          });
-          break;
-          
-        case 'refactor':
-          response = await refactorCode.mutateAsync({
-            projectId: project.id,
-            refactoringGoals: input,
-            targetFiles: intent.targetFiles || selectedFiles,
-            preserveAPI: true
           });
           break;
           
@@ -170,7 +197,7 @@ const CodeAssistantPage = () => {
           response = await explainCode.mutateAsync({
             projectId: project.id,
             query: input,
-            targetFiles: intent.targetFiles || selectedFiles,
+            targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             detailLevel: detectDetailLevel(input)
           });
           break;
@@ -180,19 +207,23 @@ const CodeAssistantPage = () => {
           response = await askQuestion.mutateAsync({
             projectId: project.id,
             query: input,
-            contextFiles: intent.targetFiles || selectedFiles,
+            contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             intent: intent.type
           });
       }
 
+      setProgress(90);
+      setProcessingStage('complete');
+      setProgress(100);
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: response.answer || response.explanation || response.response || '',
+        content: response.answer || response.explanation || response.response || response.summary || '',
         intent: intent.type,
         confidence: intent.confidence,
         metadata: {
-          files: response.filesReferences?.map(f => f.fileName) || intent.targetFiles || [],
+          files: response.filesReferences?.map((f: any) => f.fileName) || intent.targetFiles || [],
           generatedCode: response.generatedCode || response.improvedCode || response.refactoredCode,
           language: response.language,
           diff: response.diff,
@@ -205,15 +236,19 @@ const CodeAssistantPage = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      setActiveTab('chat');
       
     } catch (error) {
       console.error('Error processing request:', error);
       toast.error('Failed to process your request. Please try again.');
       
+      setProcessingStage('error');
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: 'I encountered an error processing your request. Please try rephrasing your question or check if the project is properly loaded.',
+        intent: currentIntent as any,
         timestamp: new Date()
       };
       
@@ -221,6 +256,10 @@ const CodeAssistantPage = () => {
     } finally {
       setIsLoading(false);
       setInput('');
+      setTimeout(() => {
+        setProcessingStage('complete');
+        setProgress(0);
+      }, 2000);
     }
   };
 
@@ -311,65 +350,6 @@ const CodeAssistantPage = () => {
     }
   };
 
-  const SmartSuggestions = () => (
-    <div className="flex flex-wrap gap-2 mb-4">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Generate a TypeScript React component for user authentication with form validation')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Code className="h-4 w-4 mr-1" />
-        Generate Component
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Review this code for security vulnerabilities and performance issues')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Search className="h-4 w-4 mr-1" />
-        Review Code
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Optimize this function for better performance and memory usage')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Zap className="h-4 w-4 mr-1" />
-        Optimize
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Debug this error: Cannot read property of undefined')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Bug className="h-4 w-4 mr-1" />
-        Debug Issue
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Refactor this code to follow SOLID principles and improve maintainability')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Wrench className="h-4 w-4 mr-1" />
-        Refactor
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setInput('Explain how this authentication system works step by step')}
-        className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-      >
-        <Lightbulb className="h-4 w-4 mr-1" />
-        Explain Code
-      </Button>
-    </div>
-  );
-
   const MessageComponent = ({ message }: { message: Message }) => (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -415,7 +395,7 @@ const CodeAssistantPage = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => copyToClipboard(message.metadata.generatedCode!)}
+                    onClick={() => copyToClipboard(message.metadata!.generatedCode!)}
                     className="border-white/20 bg-white/10 text-white"
                   >
                     <Copy className="h-3 w-3" />
@@ -423,7 +403,7 @@ const CodeAssistantPage = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => downloadCode(message.metadata.generatedCode!, `generated-${message.intent}.${message.metadata.language === 'typescript' ? 'ts' : 'js'}`)}
+                    onClick={() => downloadCode(message.metadata!.generatedCode!, `generated-${message.intent}.${message.metadata!.language === 'typescript' ? 'ts' : 'js'}`)}
                     className="border-white/20 bg-white/10 text-white"
                   >
                     <Download className="h-3 w-3" />
@@ -433,6 +413,10 @@ const CodeAssistantPage = () => {
               <CodeBlock
                 code={message.metadata.generatedCode}
                 language={message.metadata.language || 'typescript'}
+                actions={{
+                  copy: true,
+                  download: true
+                }}
               />
             </div>
           )}
@@ -481,6 +465,7 @@ const CodeAssistantPage = () => {
                         code={suggestion.code}
                         language="typescript"
                         className="mt-2"
+                        actions={{ copy: true }}
                       />
                     )}
                   </GlassmorphicCard>
@@ -508,6 +493,12 @@ const CodeAssistantPage = () => {
     </motion.div>
   );
 
+  const projectContext = {
+    availableFiles,
+    techStack: ['React', 'TypeScript', 'Next.js'], // This could come from project analysis
+    recentQueries: [] // Could store recent queries
+  };
+
   return (
     <div className="h-full flex flex-col text-white">
       <div className="flex items-center justify-between mb-6">
@@ -515,7 +506,9 @@ const CodeAssistantPage = () => {
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
             AI Code Assistant
           </h1>
-          <p className="text-white/70">Intelligent coding companion powered by intent classification for {project?.name}</p>
+          <p className="text-white/70">
+            Intelligent coding companion with intent classification for {project?.name}
+          </p>
         </div>
         
         <div className="flex items-center gap-2">
@@ -535,13 +528,13 @@ const CodeAssistantPage = () => {
             <MessageSquare className="h-4 w-4" />
             Smart Chat
           </TabsTrigger>
+          <TabsTrigger value="generation" className="flex items-center gap-2">
+            <Code className="h-4 w-4" />
+            Code Generation
+          </TabsTrigger>
           <TabsTrigger value="files" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Files ({selectedFiles.length})
-          </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4" />
-            History
           </TabsTrigger>
         </TabsList>
 
@@ -568,7 +561,6 @@ const CodeAssistantPage = () => {
                   <p className="text-white/60 mb-6">
                     Ask me to generate, review, debug, explain, or improve your code. I understand your intent automatically!
                   </p>
-                  <SmartSuggestions />
                 </motion.div>
               )}
               
@@ -583,13 +575,19 @@ const CodeAssistantPage = () => {
                   className="flex justify-start mb-4"
                 >
                   <GlassmorphicCard className="p-4 bg-white/10">
-                    <div className="flex items-center gap-2">
-                      <div className="animate-pulse flex space-x-1">
-                        <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-                        <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-                        <div className="w-2 h-2 bg-white/60 rounded-full"></div>
-                      </div>
-                      <span className="text-white/60">AI is analyzing your request...</span>
+                    <div className="space-y-3">
+                      <IntentProgressTracker
+                        intent={currentIntent}
+                        confidence={0.8}
+                        stage={processingStage}
+                        progress={progress}
+                        currentStep={
+                          processingStage === 'analyzing' ? 'Analyzing your request...' :
+                          processingStage === 'processing' ? 'Processing with AI...' :
+                          processingStage === 'generating' ? 'Generating response...' :
+                          'Complete'
+                        }
+                      />
                     </div>
                   </GlassmorphicCard>
                 </motion.div>
@@ -598,7 +596,14 @@ const CodeAssistantPage = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Selected Files Display */}
+          {/* Smart Input Suggestions */}
+          <SmartInputSuggestions
+            currentInput={input}
+            onSuggestionSelect={(suggestion) => setInput(suggestion)}
+            projectContext={projectContext}
+          />
+
+          {/* Context-Aware File Selector */}
           {selectedFiles.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -643,27 +648,58 @@ const CodeAssistantPage = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="files" className="flex-1 mt-4">
-          <FileExplorer
+        <TabsContent value="generation" className="flex-1 mt-4">
+          <CodeGenerationPanel
             projectId={project?.id || ''}
-            selectedFiles={selectedFiles}
-            onFileSelect={(files) => setSelectedFiles(files)}
+            availableFiles={availableFiles}
+            onGenerate={async (request) => {
+              // Mock implementation - you would integrate with your actual API
+              const result = await generateCode.mutateAsync({
+                projectId: project!.id,
+                prompt: request.prompt,
+                requirements: {
+                  framework: request.framework,
+                  language: request.language
+                }
+              });
+
+              return {
+                id: Date.now().toString(),
+                type: request.type,
+                generatedCode: result.generatedCode || '',
+                explanation: result.explanation || '',
+                filename: `generated-${request.type}.${request.language === 'typescript' ? 'ts' : 'js'}`,
+                language: result.language || 'typescript',
+                confidence: 85,
+                suggestions: []
+              };
+            }}
+            onApplyChanges={async (result) => {
+              // Mock implementation for applying changes
+              toast.success(`Applied changes for ${result.filename}`);
+            }}
           />
         </TabsContent>
 
-        <TabsContent value="history" className="flex-1 mt-4">
-          <GlassmorphicCard className="p-6 text-center">
-            <GitBranch className="h-12 w-12 mx-auto mb-4 text-white/40" />
-            <h3 className="text-lg font-medium text-white/80 mb-2">
-              Conversation History
-            </h3>
-            <p className="text-white/60">
-              Previous AI interactions and generated code will appear here
-            </p>
-          </GlassmorphicCard>
+        <TabsContent value="files" className="flex-1 mt-4">
+          <ContextAwareFileSelector
+            availableFiles={availableFiles}
+            selectedFiles={selectedFiles}
+            onFileSelectionChange={setSelectedFiles}
+            currentQuery={input}
+          />
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// Main exported component with providers
+const CodeAssistantPage = () => {
+  return (
+    <IntentClassifierProvider>
+      <CodeAssistantPageContent />
+    </IntentClassifierProvider>
   );
 };
 

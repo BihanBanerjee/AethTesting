@@ -1,4 +1,4 @@
-// Enhanced Ask Question Card with Intent-Based AI Features
+// src/app/(protected)/dashboard/ask-question-card.tsx - Updated with Integration
 'use client'
 import MDEditor from '@uiw/react-md-editor'
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useProject from '@/hooks/use-project'
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react'
-import { readStreamableValue } from 'ai/rsc';
 import CodeReferences from './code-references';
 import { api } from '@/trpc/react';
 import { toast } from 'sonner';
@@ -36,21 +35,26 @@ import {
 import { GlassmorphicCard, GlassmorphicCardHeader, GlassmorphicCardTitle, GlassmorphicCardContent } from '@/components/ui/glassmorphic-card';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Intent classification for better UX
-interface QueryIntent {
-  type: 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
-  confidence: number;
-  requiresCodeGen: boolean;
-  requiresFileModification: boolean;
-  contextNeeded: 'file' | 'function' | 'project' | 'global';
-  targetFiles?: string[];
-}
+// Import the isolated components
+import { IntentClassifierProvider, useIntentClassifier } from '@/components/code-assistant/intent-classifier-wrapper';
+import { IntentProgressTracker } from '@/components/code-assistant/intent-progress-tracker';
+import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
+import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
+import { CodeBlock } from '@/components/code/enhanced-code-block';
+import { DiffViewer } from '@/components/code/diff-viewer';
 
 // Enhanced response structure
 interface EnhancedResponse {
   type: 'answer' | 'code' | 'review' | 'debug' | 'explanation';
   content: string;
-  intent: QueryIntent;
+  intent: {
+    type: 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
+    confidence: number;
+    requiresCodeGen: boolean;
+    requiresFileModification: boolean;
+    contextNeeded: 'file' | 'function' | 'project' | 'global';
+    targetFiles?: string[];
+  };
   metadata?: {
     generatedCode?: string;
     language?: string;
@@ -73,15 +77,19 @@ interface EnhancedResponse {
   filesReferences?: {fileName: string; sourceCode: string; summary: string}[];
 }
 
-const EnhancedAskQuestionCard = () => {
+const EnhancedAskQuestionCardContent = () => {
   const { project } = useProject();
+  const { classifyQuery, isReady } = useIntentClassifier();
+  
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<EnhancedResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'response' | 'code' | 'files'>('response');
-  const [intentPreview, setIntentPreview] = useState<QueryIntent | null>(null);
+  const [intentPreview, setIntentPreview] = useState<any>(null);
   const [processingStage, setProcessingStage] = useState<'analyzing' | 'processing' | 'generating' | 'complete'>('analyzing');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [availableFiles, setAvailableFiles] = useState<string[]>([]);
 
   const saveAnswer = api.project.saveAnswer.useMutation();
   const refetch = useRefetch();
@@ -94,18 +102,28 @@ const EnhancedAskQuestionCard = () => {
   const debugCode = api.project.debugCode.useMutation();
   const explainCode = api.project.explainCode.useMutation();
 
+  // Get available files for context selection
+  const { data: projectFiles } = api.project.getProjectFiles?.useQuery(
+    { projectId: project?.id || '' },
+    { 
+      enabled: !!project?.id,
+      onSuccess: (data) => {
+        setAvailableFiles(data?.map(f => f.fileName) || []);
+      }
+    }
+  );
+
   // Intent classification preview
   useEffect(() => {
-    if (question.length > 10) {
+    if (question.length > 10 && isReady) {
       const timer = setTimeout(async () => {
         try {
           setProcessingStage('analyzing');
-          const result = await askQuestion.mutateAsync({
-            projectId: project!.id,
-            query: question,
-            classifyOnly: true
+          const intent = await classifyQuery(question, { 
+            availableFiles,
+            selectedFiles 
           });
-          setIntentPreview(result.intent);
+          setIntentPreview(intent);
         } catch (error) {
           console.error('Intent preview failed:', error);
         }
@@ -115,7 +133,7 @@ const EnhancedAskQuestionCard = () => {
     } else {
       setIntentPreview(null);
     }
-  }, [question, project?.id]);
+  }, [question, classifyQuery, isReady, availableFiles, selectedFiles]);
 
   const getIntentIcon = (type: string) => {
     switch (type) {
@@ -152,15 +170,12 @@ const EnhancedAskQuestionCard = () => {
     try {
       // First classify the intent
       setProcessingStage('processing');
-      const classificationResult = await askQuestion.mutateAsync({
-        projectId: project.id,
-        query: question,
-        classifyOnly: true
+      const intent = await classifyQuery(question, {
+        availableFiles,
+        selectedFiles
       });
 
-      const intent = classificationResult.intent;
       let result: any;
-
       setProcessingStage('generating');
 
       // Route to appropriate handler based on intent
@@ -169,7 +184,7 @@ const EnhancedAskQuestionCard = () => {
           result = await generateCode.mutateAsync({
             projectId: project.id,
             prompt: question,
-            context: intent.targetFiles,
+            context: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             requirements: {
               framework: 'react',
               language: 'typescript'
@@ -194,7 +209,7 @@ const EnhancedAskQuestionCard = () => {
           result = await improveCode.mutateAsync({
             projectId: project.id,
             suggestions: question,
-            targetFiles: intent.targetFiles,
+            targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             improvementType: 'optimization'
           });
 
@@ -213,7 +228,7 @@ const EnhancedAskQuestionCard = () => {
         case 'code_review':
           result = await reviewCode.mutateAsync({
             projectId: project.id,
-            files: intent.targetFiles || [],
+            files: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles || [],
             reviewType: 'comprehensive',
             focusAreas: question
           });
@@ -234,7 +249,7 @@ const EnhancedAskQuestionCard = () => {
           result = await debugCode.mutateAsync({
             projectId: project.id,
             errorDescription: question,
-            suspectedFiles: intent.targetFiles,
+            suspectedFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             contextLevel: intent.contextNeeded
           });
 
@@ -256,7 +271,7 @@ const EnhancedAskQuestionCard = () => {
           result = await explainCode.mutateAsync({
             projectId: project.id,
             query: question,
-            targetFiles: intent.targetFiles,
+            targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
             detailLevel: 'detailed'
           });
 
@@ -274,7 +289,8 @@ const EnhancedAskQuestionCard = () => {
           // Fallback to general Q&A
           const qaResult = await askQuestion.mutateAsync({
             projectId: project.id,
-            query: question
+            query: question,
+            contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
           });
 
           setResponse({
@@ -384,22 +400,11 @@ const EnhancedAskQuestionCard = () => {
     </div>
   );
 
-  const ProcessingIndicator = () => (
-    <div className="flex items-center gap-2 mb-4">
-      <div className="flex items-center gap-2">
-        {processingStage === 'analyzing' && <Clock className="h-4 w-4 animate-pulse text-blue-300" />}
-        {processingStage === 'processing' && <Loader2 className="h-4 w-4 animate-spin text-yellow-300" />}
-        {processingStage === 'generating' && <Sparkles className="h-4 w-4 animate-pulse text-purple-300" />}
-        {processingStage === 'complete' && <CheckCircle className="h-4 w-4 text-green-300" />}
-        <span className="text-sm text-white/70 capitalize">
-          {processingStage === 'analyzing' && 'Analyzing your request...'}
-          {processingStage === 'processing' && 'Processing with AI...'}
-          {processingStage === 'generating' && 'Generating response...'}
-          {processingStage === 'complete' && 'Complete'}
-        </span>
-      </div>
-    </div>
-  );
+  const projectContext = {
+    availableFiles,
+    techStack: ['React', 'TypeScript', 'Next.js'],
+    recentQueries: []
+  };
 
   return (
     <>
@@ -437,7 +442,25 @@ const EnhancedAskQuestionCard = () => {
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden">
-            {loading && <ProcessingIndicator />}
+            {loading && (
+              <IntentProgressTracker
+                intent={intentPreview?.type || 'question'}
+                confidence={intentPreview?.confidence || 0.8}
+                stage={processingStage}
+                progress={
+                  processingStage === 'analyzing' ? 25 :
+                  processingStage === 'processing' ? 50 :
+                  processingStage === 'generating' ? 75 :
+                  100
+                }
+                currentStep={
+                  processingStage === 'analyzing' ? 'Analyzing your request...' :
+                  processingStage === 'processing' ? 'Processing with AI...' :
+                  processingStage === 'generating' ? 'Generating response...' :
+                  'Complete'
+                }
+              />
+            )}
             
             {response && (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
@@ -491,9 +514,12 @@ const EnhancedAskQuestionCard = () => {
                                 </div>
                                 <p className="text-sm text-white/80">{suggestion.description}</p>
                                 {suggestion.code && (
-                                  <pre className="text-xs bg-black/20 p-2 rounded mt-2 overflow-auto">
-                                    <code>{suggestion.code}</code>
-                                  </pre>
+                                  <CodeBlock
+                                    code={suggestion.code}
+                                    language="typescript"
+                                    className="mt-2"
+                                    actions={{ copy: true }}
+                                  />
                                 )}
                               </div>
                             ))}
@@ -571,9 +597,14 @@ const EnhancedAskQuestionCard = () => {
                             </Button>
                           </div>
                         </div>
-                        <pre className="bg-black/20 p-4 rounded overflow-auto text-sm">
-                          <code>{response.metadata.generatedCode}</code>
-                        </pre>
+                        <CodeBlock
+                          code={response.metadata.generatedCode}
+                          language={response.metadata.language || 'typescript'}
+                          actions={{
+                            copy: true,
+                            download: true
+                          }}
+                        />
                       </div>
                     </TabsContent>
                   )}
@@ -619,6 +650,25 @@ const EnhancedAskQuestionCard = () => {
         <GlassmorphicCardContent>
           {!response && <SmartSuggestions />}
           
+          {/* Smart Input Suggestions */}
+          <SmartInputSuggestions
+            currentInput={question}
+            onSuggestionSelect={(suggestion) => setQuestion(suggestion)}
+            projectContext={projectContext}
+          />
+
+          {/* Context-Aware File Selector */}
+          {availableFiles.length > 0 && (
+            <div className="mb-4">
+              <ContextAwareFileSelector
+                availableFiles={availableFiles}
+                selectedFiles={selectedFiles}
+                onFileSelectionChange={setSelectedFiles}
+                currentQuery={question}
+              />
+            </div>
+          )}
+          
           <div>
             <Textarea 
               placeholder='Ask me to generate code, review existing code, debug issues, explain functionality, or answer questions about your codebase...' 
@@ -657,7 +707,16 @@ const EnhancedAskQuestionCard = () => {
         </GlassmorphicCardContent>
       </GlassmorphicCard>
     </>
-  )
-}
+  );
+};
 
-export default EnhancedAskQuestionCard
+// Main exported component with providers
+const EnhancedAskQuestionCard = () => {
+  return (
+    <IntentClassifierProvider>
+      <EnhancedAskQuestionCardContent />
+    </IntentClassifierProvider>
+  );
+};
+
+export default EnhancedAskQuestionCard;

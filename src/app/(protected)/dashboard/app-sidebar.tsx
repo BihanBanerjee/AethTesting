@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/custom-sidebar"
 import useProject from "@/hooks/use-project"
 import { cn } from "@/lib/utils"
-import { Bot, CreditCard, LayoutDashboard, Plus, Presentation } from "lucide-react"
+import { Bot, Code2, CreditCard, LayoutDashboard, Plus, Presentation } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -31,6 +31,11 @@ const items = [
         title: "Q&A",
         url: '/qa',
         icon: Bot
+    },
+    {
+        title: "Code Assistant", // New item
+        url: '/code-assistant',
+        icon: Code2
     },
     {
         title: "Meetings",

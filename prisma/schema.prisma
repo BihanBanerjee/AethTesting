@@ -23,13 +23,15 @@ model User {
   credits      Int       @default(150)
   userToProjects UserToProject[]
   questionsAsked Question[]
-
   stripeTransactions StripeTransction[]
+  
+  // New: User preferences for AI assistant
+  aiPreferences Json? // Store user preferences for code generation, review settings, etc.
 }
 
 enum ProjectStatus {
   INITIALIZING
-  LOADING_REPO        // Add this new status
+  LOADING_REPO
   INDEXING_REPO
   POLLING_COMMITS
   DEDUCTING_CREDITS
@@ -56,6 +58,10 @@ model Project {
   sourceCodeEmbeddings SourceCodeEmbedding[]
   savedQuestions Question[]
   meetings         Meeting[]
+  
+  // New: AI interaction history and analytics
+  aiInteractions AiInteraction[]
+  codeGenerations CodeGeneration[]
 }
 
 model UserToProject {
@@ -70,11 +76,12 @@ model UserToProject {
   project      Project   @relation(fields: [projectId], references: [id])
 
   @@unique([userId, projectId])
-
 }
 
 model SourceCodeEmbedding {
   id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now()) // Add missing timestamp
+  updatedAt    DateTime  @updatedAt      // Add missing timestamp
 
   summaryEmbedding Unsupported("Vector(768)")?
   sourceCode   String
@@ -83,6 +90,15 @@ model SourceCodeEmbedding {
 
   projectId    String
   project      Project   @relation(fields: [projectId], references: [id])
+  
+  // New: Enhanced metadata for better AI context
+  fileType     String?   // 'component', 'utility', 'api', 'config', etc.
+  language     String?   // 'typescript', 'javascript', 'python', etc.
+  complexity   Int?      // Complexity score for prioritization
+  lastModified DateTime? // Last modification date from git
+  
+  @@index([projectId, fileName])
+  @@index([projectId, fileType])
 }
 
 enum MeetingStatus {
@@ -96,7 +112,6 @@ model Meeting {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  
   meetingUrl   String //firebase storage url
   
   name         String
@@ -135,6 +150,12 @@ model Question {
   project      Project   @relation(fields: [projectId], references: [id])
   userId       String
   user         User       @relation(fields: [userId], references: [id])
+  
+  // New: Enhanced question metadata
+  intent       String?   // 'code_generation', 'debug', 'review', etc.
+  confidence   Float?    // Intent classification confidence
+  processingTime Int?    // Time taken to process in milliseconds
+  satisfaction Int?      // User satisfaction rating (1-5)
 }
 
 enum CommitProcessingStatus {
@@ -142,6 +163,7 @@ enum CommitProcessingStatus {
   COMPLETED
   FAILED
 }
+
 model Commit {
   id           String    @id @default(cuid())
   createdAt    DateTime  @default(now())
@@ -159,10 +181,8 @@ model Commit {
   //ai summary
   summary String
   
-  // NEW: Processing status field
   processingStatus CommitProcessingStatus @default(COMPLETED)
   
-  // NEW: Unique constraint for upsert operations
   @@unique([projectId, commitHash], name: "projectId_commitHash")
 }
 
@@ -175,4 +195,124 @@ model StripeTransction {
   user         User      @relation(fields: [userId], references: [id])
 
   credits      Int      
+}
+
+// New: AI Interaction tracking for analytics and improvements
+model AiInteraction {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+  
+  userId       String    // Reference to user without direct relation for flexibility
+  
+  // Interaction details
+  intent       String    // 'code_generation', 'debug', 'review', etc.
+  query        String    // Original user query
+  confidence   Float?    // Intent classification confidence
+  
+  // Context information
+  contextFiles Json?     // Files selected for context
+  metadata     Json?     // Additional metadata about the interaction
+  
+  // Response information
+  responseType String?   // 'code', 'explanation', 'review', etc.
+  responseTime Int?      // Processing time in milliseconds
+  success      Boolean   @default(true)
+  errorMessage String?   // Error message if failed
+  
+  // User feedback
+  helpful      Boolean?  // User feedback on helpfulness
+  rating       Int?      // User rating (1-5)
+  feedback     String?   // User feedback text
+  
+  @@index([projectId, intent])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// New: Code Generation tracking for better AI training
+model CodeGeneration {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+  
+  userId       String    // Reference to user
+  
+  // Generation details
+  prompt       String    // Original generation prompt
+  intent       String    // Specific intent type
+  
+  // Requirements and context
+  requirements Json?     // Framework, language, features, constraints
+  contextFiles Json?     // Files used for context
+  
+  // Generated content
+  generatedCode String?  // The generated code
+  filename     String?   // Target filename
+  language     String?   // Programming language
+  
+  // Quality metrics
+  complexity   Int?      // Code complexity score
+  linesOfCode  Int?      // Generated lines of code
+  
+  // User interaction
+  applied      Boolean   @default(false) // Whether user applied the code
+  modified     Boolean   @default(false) // Whether user modified the code
+  satisfaction Int?      // User satisfaction (1-5)
+  
+  @@index([projectId, intent])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// New: File Analytics for understanding codebase patterns
+model FileAnalytics {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  fileName     String
+  
+  // Usage metrics
+  queryCount   Int       @default(0) // How often this file is referenced in queries
+  lastQueried  DateTime? // Last time this file was referenced
+  
+  // AI context metrics
+  contextUseCount Int    @default(0) // How often used as context
+  successRate  Float?   // Success rate when used as context
+  
+  // Code quality metrics
+  complexity   Int?     // Current complexity score
+  maintainability Float? // Maintainability index
+  
+  @@unique([projectId, fileName])
+  @@index([projectId, queryCount])
+}
+
+// New: Smart Suggestions tracking for improvement
+model SuggestionFeedback {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  
+  projectId    String
+  userId       String
+  
+  // Suggestion details
+  suggestionType String  // 'smart_input', 'file_context', 'intent_based'
+  suggestion   String   // The actual suggestion text
+  query        String   // User's current query when suggestion was shown
+  
+  // User interaction
+  accepted     Boolean  // Whether user accepted the suggestion
+  helpful      Boolean? // User feedback on helpfulness
+  
+  @@index([projectId, suggestionType])
+  @@index([projectId, accepted])
 }
