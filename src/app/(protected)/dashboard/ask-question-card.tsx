@@ -6,7 +6,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogContent } from '@/components/u
 import { Textarea } from '@/components/ui/textarea';
 import useProject from '@/hooks/use-project'
 import Image from 'next/image';
-import React from 'react'
+import React, { useState } from 'react'
 import { askQuestion } from './actions';
 import { readStreamableValue } from 'ai/rsc';
 import CodeReferences from './code-references';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import useRefetch from '@/hooks/use-refetch';
 import { Bot, Save  } from 'lucide-react';
 import { GlassmorphicCard, GlassmorphicCardHeader, GlassmorphicCardTitle, GlassmorphicCardContent } from '@/components/ui/glassmorphic-card';
+import { IntentClassifier } from '@/lib/intent-classifier';
 
 const AskQuestionCard = () => {
     const { project } = useProject();
@@ -25,6 +26,8 @@ const AskQuestionCard = () => {
     const [answer, setAnswer] = React.useState('');
     const saveAnswer = api.project.saveAnswer.useMutation();
 
+    const [classifier] = useState(() => new IntentClassifier());
+
     const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         setAnswer('')
         setFilesReferences([])
@@ -34,16 +37,31 @@ const AskQuestionCard = () => {
         }
         setLoading(true)
         
-        const { output, filesReferences } = await askQuestion(question, project.id)
-        setOpen(true)
-        setFilesReferences(filesReferences)
-
+        try {
+      // Use AI intent classification
+      const intent = await classifier.classifyQuery(question);
+      
+      let result;
+      
+      if (intent.requiresCodeGen) {
+        // Route to code generation instead of simple Q&A
+        result = await generateCodeBasedOnIntent(question, project.id, intent);
+      } else {
+        // Use existing Q&A for informational queries
+        const { output, filesReferences } = await askQuestion(question, project.id);
+        setFilesReferences(filesReferences);
+        
         for await (const delta of readStreamableValue(output)) {
-            if(delta) {
-                setAnswer(ans => ans + delta)
-            }
+          if (delta) {
+            setAnswer(ans => ans + delta);
+          }
         }
-        setLoading(false)
+      }
+    } catch (error) {
+      console.error('Error processing question:', error);
+      // Fallback to existing logic
+    } finally {
+      setLoading(false);
     }
 
     const refetch = useRefetch();
@@ -150,6 +168,7 @@ const AskQuestionCard = () => {
         </GlassmorphicCard>
         </>
     )
+}
 }
 
 export default AskQuestionCard
