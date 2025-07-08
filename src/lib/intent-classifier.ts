@@ -1,4 +1,4 @@
-// src/lib/intent-classifier.ts
+// src/lib/intent-classifier.ts - Enhanced with better error handling
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -16,35 +16,41 @@ export interface QueryIntent {
 export class IntentClassifier {
   
   async classifyQuery(query: string, projectContext?: any): Promise<QueryIntent> {
-    const prompt = `
-      Analyze this user query and classify the intent. Consider the context of a software development project.
-
-      Query: "${query}"
-
-      Project Context: ${projectContext ? JSON.stringify(projectContext, null, 2) : 'No specific context'}
-
-      Classify the intent as one of:
-      1. question - User wants information about existing code
-      2. code_generation - User wants new code to be written
-      3. code_improvement - User wants existing code to be optimized or enhanced
-      4. code_review - User wants code to be reviewed for issues
-      5. refactor - User wants code structure to be changed while preserving functionality
-      6. debug - User wants help fixing bugs or errors
-      7. explain - User wants detailed explanation of how code works
-
-      Respond with ONLY a JSON object in this format:
-      {
-        "type": "intent_type",
-        "confidence": 0.85,
-        "targetFiles": ["file1.ts", "file2.ts"],
-        "requiresCodeGen": true,
-        "requiresFileModification": false,
-        "contextNeeded": "file|function|project|global",
-        "reasoning": "Brief explanation of classification"
-      }
-    `;
+    // Check if API key is available
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('Gemini API key not configured, using fallback classification');
+      return this.fallbackClassification(query);
+    }
 
     try {
+      const prompt = `
+        Analyze this user query and classify the intent. Consider the context of a software development project.
+
+        Query: "${query}"
+
+        Project Context: ${projectContext ? JSON.stringify(projectContext, null, 2) : 'No specific context'}
+
+        Classify the intent as one of:
+        1. question - User wants information about existing code
+        2. code_generation - User wants new code to be written
+        3. code_improvement - User wants existing code to be optimized or enhanced
+        4. code_review - User wants code to be reviewed for issues
+        5. refactor - User wants code structure to be changed while preserving functionality
+        6. debug - User wants help fixing bugs or errors
+        7. explain - User wants detailed explanation of how code works
+
+        Respond with ONLY a JSON object in this format:
+        {
+          "type": "intent_type",
+          "confidence": 0.85,
+          "targetFiles": ["file1.ts", "file2.ts"],
+          "requiresCodeGen": true,
+          "requiresFileModification": false,
+          "contextNeeded": "file|function|project|global",
+          "reasoning": "Brief explanation of classification"
+        }
+      `;
+
       const result = await model.generateContent([prompt]);
       const response = result.response.text();
       
@@ -70,6 +76,12 @@ export class IntentClassifier {
     } catch (error) {
       console.error('Intent classification failed:', error);
       
+      // If it's an API key error, provide helpful feedback
+      if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
+        console.error('🔑 Gemini API key is invalid or missing. Please check your environment variables.');
+        console.error('Make sure GEMINI_API_KEY is set in your .env file');
+      }
+      
       // Fallback classification based on keywords
       return this.fallbackClassification(query);
     }
@@ -77,6 +89,8 @@ export class IntentClassifier {
 
   private fallbackClassification(query: string): QueryIntent {
     const lowerQuery = query.toLowerCase();
+    
+    console.log('Using fallback intent classification for:', query);
     
     // Code generation patterns
     if (this.matchesPatterns(lowerQuery, [
@@ -88,7 +102,8 @@ export class IntentClassifier {
         confidence: 0.7,
         requiresCodeGen: true,
         requiresFileModification: true,
-        contextNeeded: 'project'
+        contextNeeded: 'project',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -102,7 +117,8 @@ export class IntentClassifier {
         confidence: 0.7,
         requiresCodeGen: true,
         requiresFileModification: true,
-        contextNeeded: 'file'
+        contextNeeded: 'file',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -116,7 +132,8 @@ export class IntentClassifier {
         confidence: 0.7,
         requiresCodeGen: true,
         requiresFileModification: true,
-        contextNeeded: 'function'
+        contextNeeded: 'function',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -130,7 +147,8 @@ export class IntentClassifier {
         confidence: 0.8,
         requiresCodeGen: false,
         requiresFileModification: false,
-        contextNeeded: 'file'
+        contextNeeded: 'file',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -144,7 +162,8 @@ export class IntentClassifier {
         confidence: 0.7,
         requiresCodeGen: false,
         requiresFileModification: false,
-        contextNeeded: 'file'
+        contextNeeded: 'file',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -158,7 +177,8 @@ export class IntentClassifier {
         confidence: 0.8,
         requiresCodeGen: false,
         requiresFileModification: false,
-        contextNeeded: 'function'
+        contextNeeded: 'function',
+        targetFiles: this.extractFileReferences(query, [])
       };
     }
 
@@ -168,7 +188,8 @@ export class IntentClassifier {
       confidence: 0.5,
       requiresCodeGen: false,
       requiresFileModification: false,
-      contextNeeded: 'project'
+      contextNeeded: 'project',
+      targetFiles: this.extractFileReferences(query, [])
     };
   }
 

@@ -1,10 +1,10 @@
-// src/lib/code-generation-engine.ts
+// src/lib/code-generation-engine.ts - Complete Fixed Version
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "@/server/db";
 import type { QueryIntent } from "./intent-classifier";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Use Pro for complex code generation
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
 export interface CodeGenerationRequest {
   intent: QueryIntent;
@@ -96,7 +96,9 @@ Provide improvements focusing on:
 4. Security considerations
 5. Type safety (if applicable)
 
-Respond with ONLY a JSON object in this format:
+IMPORTANT: Respond with ONLY a valid JSON object. Do not use backticks in the JSON values. Use \\n for line breaks in code.
+
+\`\`\`json
 {
   "type": "file_modification",
   "files": [{
@@ -110,6 +112,7 @@ Respond with ONLY a JSON object in this format:
   "warnings": ["Any potential issues or considerations"],
   "dependencies": ["new dependencies if any"]
 }
+\`\`\`
 `;
 
     const result = await model.generateContent([prompt]);
@@ -119,7 +122,6 @@ Respond with ONLY a JSON object in this format:
   }
 
   private async refactorCode(request: CodeGenerationRequest, context: ProjectContext): Promise<CodeGenerationResult> {
-    // Similar to improveCode but focused on structural changes
     const prompt = this.buildRefactorPrompt(request, context);
     
     const result = await model.generateContent([prompt]);
@@ -167,19 +169,22 @@ Generate code that:
 5. Follows the established file/folder structure
 6. Includes proper imports and exports
 
-Respond with ONLY a JSON object in this format:
+CRITICAL: Respond with a JSON object wrapped in \`\`\`json code block. Use \\n for line breaks in code content.
+
+\`\`\`json
 {
-  "type": "new_file|file_modification|code_snippet|multiple_files",
+  "type": "new_file",
   "files": [{
     "path": "relative/path/to/file.ts",
-    "content": "complete file content here",
+    "content": "// Complete file content here\\nfunction example() {\\n  return 'hello';\\n}",
     "language": "typescript",
-    "changeType": "create|modify|replace"
+    "changeType": "create"
   }],
   "explanation": "Detailed explanation of the generated code",
   "warnings": ["Any potential issues or considerations"],
   "dependencies": ["new npm packages needed"]
 }
+\`\`\`
 `;
   }
 
@@ -203,7 +208,17 @@ Refactoring Guidelines:
 5. Maintain backward compatibility where possible
 6. Update tests if they exist
 
-Respond with ONLY a JSON object showing the refactored code structure.
+CRITICAL: Respond with a JSON object wrapped in \`\`\`json code block.
+
+\`\`\`json
+{
+  "type": "file_modification",
+  "files": [{"path": "...", "content": "...", "language": "...", "changeType": "modify"}],
+  "explanation": "...",
+  "warnings": [...],
+  "dependencies": [...]
+}
+\`\`\`
 `;
   }
 
@@ -223,35 +238,70 @@ Debugging Approach:
 4. Include logging/testing recommendations
 5. Address potential edge cases
 
-Respond with ONLY a JSON object with debugging solutions.
+CRITICAL: Respond with a JSON object wrapped in \`\`\`json code block.
+
+\`\`\`json
+{
+  "type": "code_snippet",
+  "files": [{"path": "debug-solution.ts", "content": "// Fixed code here", "language": "typescript", "changeType": "create"}],
+  "explanation": "Debugging analysis and solution",
+  "warnings": ["Potential issues to watch"],
+  "dependencies": []
+}
+\`\`\`
 `;
   }
 
   private parseCodeGenerationResponse(response: string, context: ProjectContext): CodeGenerationResult {
     try {
-      // Extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in AI response');
+      console.log('🔍 Raw AI Response:', response.substring(0, 200) + '...');
+      
+      // SIMPLIFIED: Just extract JSON without aggressive cleaning
+      let jsonStr = this.extractJSON(response);
+      
+      if (!jsonStr) {
+        throw new Error('No valid JSON found in AI response');
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('📝 Extracted JSON:', jsonStr.substring(0, 200) + '...');
+      
+      // Try to parse directly first
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (firstError) {
+        console.log('❌ First parse failed, trying light cleaning...');
+        
+        // Only do minimal, safe cleaning
+        jsonStr = this.lightCleanJSON(jsonStr);
+        console.log('🧹 Light cleaned JSON:', jsonStr.substring(0, 200) + '...');
+        
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch (secondError) {
+          console.log('❌ Second parse failed, trying content extraction...');
+          
+          // Last resort: extract just the content if it's a code generation
+          return this.extractCodeFromResponse(response);
+        }
+      }
       
       // Validate the response structure
       if (!parsed.type || !parsed.files || !Array.isArray(parsed.files)) {
         throw new Error('Invalid response structure from AI');
       }
 
-      // Process each file
+      // Process each file and clean any remaining issues
       const processedFiles: GeneratedFile[] = parsed.files.map((file: any) => ({
         path: file.path,
-        content: file.content,
+        content: this.cleanCodeContent(file.content),
         language: file.language || this.detectLanguage(file.path),
         changeType: file.changeType || 'create',
         diff: file.diff,
         insertionPoint: file.insertionPoint
       }));
 
+      console.log('✅ Successfully parsed AI response');
       return {
         type: parsed.type,
         files: processedFiles,
@@ -261,9 +311,192 @@ Respond with ONLY a JSON object with debugging solutions.
       };
 
     } catch (error) {
-      console.error('Failed to parse AI response:', error);
-      throw new Error(`Failed to parse code generation response: ${error.message}`);
+      console.error('❌ Failed to parse AI response:', error);
+      console.error('Response was:', response.substring(0, 500) + '...');
+      
+      // Enhanced fallback: try to extract useful content
+      return this.createSmartFallbackResponse(response, context);
     }
+  }
+
+  private extractJSON(response: string): string | null {
+    // Strategy 1: Look for JSON between ```json and ```
+    let jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      return jsonMatch[1].trim();
+    }
+    
+    // Strategy 2: Look for any code block that starts with {
+    jsonMatch = response.match(/```\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      const content = jsonMatch?.[1]?.trim();
+      if ( content !== undefined && content.startsWith('{')) {
+        return content;
+      }
+    }
+    
+    // Strategy 3: Look for JSON object directly
+    jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return jsonMatch[0];
+    }
+    
+    return null;
+  }
+
+  private lightCleanJSON(jsonStr: string): string {
+    // Only do minimal, safe cleaning that won't break valid JSON
+    return jsonStr
+      // Remove trailing commas before } or ]
+      .replace(/,(\s*[}\]])/g, '$1')
+      // Fix obvious backtick issues (but be very careful)
+      .replace(/:\s*`([^`]*)`/g, ': "$1"')
+      // Remove any remaining markdown artifacts
+      .replace(/^```json\s*/, '')
+      .replace(/\s*```$/, '');
+  }
+
+  private extractCodeFromResponse(response: string): CodeGenerationResult {
+    console.log('🔧 Extracting code from response as fallback');
+    
+    // Find all code blocks
+    const codeBlocks = response.match(/```[\s\S]*?```/g) || [];
+    
+    let extractedCode = '';
+    let language = 'typescript';
+    let explanation = 'Generated code (extracted from malformed response)';
+    
+    // Look for the largest code block that isn't JSON
+    for (const block of codeBlocks) {
+      const content = block.replace(/```\w*\n?/, '').replace(/\n?```$/, '').trim();
+      
+      // Skip if it looks like JSON
+      if (content.startsWith('{') && content.includes('"type"')) {
+        continue;
+      }
+      
+      // Use the first non-JSON code block
+      if (content.length > extractedCode.length) {
+        extractedCode = content;
+        
+        // Try to detect language
+        const langMatch = block.match(/```(\w+)/);
+        if (langMatch && langMatch[1] !== 'json') {
+          language = langMatch?.[1] ?? 'typescript';
+        }
+      }
+    }
+    
+    // If no code blocks found, try to extract from the full response
+    if (!extractedCode) {
+      // Look for import statements or function definitions
+      const importMatch = response.match(/import[\s\S]*?from[\s\S]*?;/);
+      if (importMatch) {
+        // Try to find a logical end point
+        const lines = response.split('\n');
+        let startIndex = -1;
+        let endIndex = lines.length;
+        
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i]?.includes('import') && startIndex === -1) {
+            startIndex = i;
+          }
+          if (lines[i]?.includes('export') && startIndex !== -1) {
+            endIndex = i + 10; // Include a few more lines after export
+            break;
+          }
+        }
+        
+        if (startIndex !== -1) {
+          extractedCode = lines.slice(startIndex, endIndex).join('\n');
+        }
+      }
+    }
+    
+    // Final fallback
+    if (!extractedCode) {
+      extractedCode = '// Unable to extract code from AI response\n// Please try again or rephrase your request';
+      explanation = 'Failed to parse AI response - please try again';
+    }
+    
+    return {
+      type: 'code_snippet',
+      files: [{
+        path: `generated-code.${language === 'typescript' ? 'ts' : language === 'jsx' ? 'jsx' : 'js'}`,
+        content: extractedCode,
+        language,
+        changeType: 'create'
+      }],
+      explanation,
+      warnings: ['Response parsing failed - extracted code may be incomplete'],
+      dependencies: []
+    };
+  }
+
+  private createSmartFallbackResponse(response: string, context: ProjectContext): CodeGenerationResult {
+    console.log('🚨 Creating smart fallback response');
+    
+    // Try the code extraction first
+    const extracted = this.extractCodeFromResponse(response);
+    
+    // If we got meaningful code, return it
+    if ((extracted.files?.[0]?.content?.length ?? 0) > 50 && !(extracted.files?.[0]?.content?.includes('Unable to extract') ?? false)) {
+      return extracted;
+    }
+    
+    // Otherwise, create a helpful error response
+    return {
+      type: 'code_snippet',
+      files: [{
+        path: 'error-response.md',
+        content: `# AI Response Processing Error
+
+The AI generated a response, but it couldn't be parsed properly.
+
+## What happened:
+- The AI response contained malformed JSON
+- Automatic extraction failed
+- This is likely due to the AI including special characters in the response
+
+## What you can do:
+1. Try rephrasing your request more specifically
+2. Ask for simpler code generation tasks
+3. Specify the exact file type and structure you want
+
+## Partial AI Response:
+\`\`\`
+${response.substring(0, 500)}${response.length > 500 ? '...' : ''}
+\`\`\`
+
+Please try again with a more specific request.`,
+        language: 'markdown',
+        changeType: 'create'
+      }],
+      explanation: 'AI response parsing failed - see the generated file for details and suggestions',
+      warnings: [
+        'Response parsing failed due to malformed JSON',
+        'Try rephrasing your request more specifically',
+        'Consider asking for simpler code generation tasks'
+      ],
+      dependencies: []
+    };
+  }
+
+  private cleanCodeContent(content: string): string {
+    if (!content) return '';
+    
+    // If content is wrapped in backticks, remove them
+    if (content.startsWith('```') && content.endsWith('```')) {
+      const lines = content.split('\n');
+      lines.shift(); // Remove first ```
+      lines.pop();   // Remove last ```
+      content = lines.join('\n');
+    }
+    
+    // Remove language specifier from first line if present
+    content = content.replace(/^(typescript|javascript|tsx|jsx|ts|js)\n/, '');
+    
+    return content.trim();
   }
 
   private async getProjectContext(projectId: string, contextLevel: string, targetFiles?: string[]): Promise<ProjectContext> {
@@ -335,32 +568,38 @@ Respond with ONLY a JSON object with debugging solutions.
     
     files.forEach(file => {
       const fileName = file.fileName.toLowerCase();
-      const content = file.sourceCode.toLowerCase();
+      const content = (typeof file.sourceCode === 'string' ? file.sourceCode : JSON.stringify(file.sourceCode)).toLowerCase();
       
       // Framework detection
       if (fileName.includes('next') || content.includes('next/')) stack.add('Next.js');
       if (content.includes('react')) stack.add('React');
       if (content.includes('vue')) stack.add('Vue.js');
       if (content.includes('angular')) stack.add('Angular');
+      if (content.includes('svelte')) stack.add('Svelte');
       
       // Language detection
       if (fileName.endsWith('.ts') || fileName.endsWith('.tsx')) stack.add('TypeScript');
       if (fileName.endsWith('.js') || fileName.endsWith('.jsx')) stack.add('JavaScript');
       if (fileName.endsWith('.py')) stack.add('Python');
+      if (fileName.endsWith('.rs')) stack.add('Rust');
+      if (fileName.endsWith('.go')) stack.add('Go');
       
       // Database
       if (content.includes('prisma')) stack.add('Prisma');
       if (content.includes('mongoose')) stack.add('MongoDB');
-      if (content.includes('postgres')) stack.add('PostgreSQL');
+      if (content.includes('postgres') || content.includes('postgresql')) stack.add('PostgreSQL');
+      if (content.includes('mysql')) stack.add('MySQL');
       
       // Styling
       if (content.includes('tailwind')) stack.add('Tailwind CSS');
       if (content.includes('styled-components')) stack.add('Styled Components');
+      if (content.includes('emotion')) stack.add('Emotion');
       
       // State Management
       if (content.includes('redux')) stack.add('Redux');
       if (content.includes('zustand')) stack.add('Zustand');
       if (content.includes('recoil')) stack.add('Recoil');
+      if (content.includes('jotai')) stack.add('Jotai');
     });
     
     return Array.from(stack);
@@ -403,10 +642,9 @@ Respond with ONLY a JSON object with debugging solutions.
   }
 
   private inferCodingStandards(files: any[]): any {
-    // Analyze common patterns in the codebase
     return {
-      indentation: '2 spaces', // Could be inferred from actual code
-      quotes: 'single', // Could be inferred
+      indentation: '2 spaces',
+      quotes: 'single',
       semicolons: true,
       trailingCommas: true,
       maxLineLength: 100
@@ -422,11 +660,9 @@ Respond with ONLY a JSON object with debugging solutions.
       
       parts.forEach((part, index) => {
         if (index === parts.length - 1) {
-          // It's a file
           if (!current._files) current._files = [];
           current._files.push(part);
         } else {
-          // It's a directory
           if (!current[part]) current[part] = {};
           current = current[part];
         }
@@ -484,7 +720,6 @@ Respond with ONLY a JSON object with debugging solutions.
       const parsed = JSON.parse(sourceCode);
       return parsed.exports || [];
     } catch {
-      // Fallback regex parsing
       const exports: string[] = [];
       const exportMatches = sourceCode.match(/export\s+(?:default\s+)?(?:function|class|const|let|var)\s+(\w+)/g);
       if (exportMatches) {
@@ -502,13 +737,12 @@ Respond with ONLY a JSON object with debugging solutions.
       const parsed = JSON.parse(sourceCode);
       return parsed.imports || [];
     } catch {
-      // Fallback regex parsing
       const imports: string[] = [];
       const importMatches = sourceCode.match(/import.*from\s+['"]([^'"]+)['"]/g);
       if (importMatches) {
         importMatches.forEach(match => {
-          const module = match.match(/from\s+['"]([^'"]+)['"]/)?.[1];
-          if (module) imports.push(module);
+          const moduleName = match.match(/from\s+['"]([^'"]+)['"]/)?.[1];
+          if (moduleName) imports.push(moduleName);
         });
       }
       return imports;

@@ -1,4 +1,4 @@
-// src/components/code/code-generation-panel.tsx
+// src/components/code/code-generation-panel.tsx - Fixed version
 'use client'
 
 import React, { useState } from 'react';
@@ -151,17 +151,17 @@ export const CodeGenerationPanel: React.FC<CodeGenerationPanelProps> = ({
                 Target File (Optional)
               </label>
               <Select
-                value={request.targetFile || ''}
+                value={request.targetFile || 'none'}
                 onValueChange={(value) => setRequest(prev => ({ 
                   ...prev, 
-                  targetFile: value || undefined 
+                  targetFile: value === 'none' ? undefined : value 
                 }))}
               >
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Select file..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific file</SelectItem>
+                  <SelectItem value="none">No specific file</SelectItem>
                   {availableFiles.map(file => (
                     <SelectItem key={file} value={file}>{file}</SelectItem>
                   ))}
@@ -188,7 +188,7 @@ export const CodeGenerationPanel: React.FC<CodeGenerationPanelProps> = ({
                 Language
               </label>
               <Select
-                value={request.language}
+                value={request.language || 'typescript'}
                 onValueChange={(value) => setRequest(prev => ({ ...prev, language: value }))}
               >
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
@@ -209,17 +209,17 @@ export const CodeGenerationPanel: React.FC<CodeGenerationPanelProps> = ({
                 Framework (Optional)
               </label>
               <Select
-                value={request.framework || ''}
+                value={request.framework || 'none'}
                 onValueChange={(value) => setRequest(prev => ({ 
                   ...prev, 
-                  framework: value || undefined 
+                  framework: value === 'none' ? undefined : value 
                 }))}
               >
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Select framework..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No framework</SelectItem>
+                  <SelectItem value="none">No framework</SelectItem>
                   <SelectItem value="react">React</SelectItem>
                   <SelectItem value="nextjs">Next.js</SelectItem>
                   <SelectItem value="express">Express</SelectItem>
