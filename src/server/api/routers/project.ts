@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure} from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { checkCredits } from "@/lib/github-loader";
 import { inngest } from "@/lib/inngest/client";
+import { calculateQuestionImpact, formatProcessingTime, getConfidenceLevel, getIntentColor, getIntentIcon, getQuestionStatistics, getSatisfactionLevel } from "@/lib/helper";
 
 export const projectRouter = createTRPCRouter({
     createProject: protectedProcedure.input(
@@ -678,39 +679,509 @@ export const projectRouter = createTRPCRouter({
         return commits
     }),
     saveAnswer: protectedProcedure.input(
+    z.object({
+        projectId: z.string(),
+        question: z.string(),
+        answer: z.string(),
+        filesReferences: z.any().optional(),
+        
+        // Enhanced metadata for AI interactions
+        metadata: z.object({
+            // Intent classification data
+            intent: z.object({
+                type: z.enum(['question', 'code_generation', 'code_improvement', 'code_review', 'refactor', 'debug', 'explain']),
+                confidence: z.number(),
+                requiresCodeGen: z.boolean(),
+                requiresFileModification: z.boolean(),
+                contextNeeded: z.enum(['file', 'function', 'project', 'global']),
+                targetFiles: z.array(z.string()).optional()
+            }).optional(),
+            
+            // Generated code data
+            generatedCode: z.object({
+                content: z.string(),
+                language: z.string(),
+                filename: z.string().optional(),
+                type: z.enum(['new_file', 'file_modification', 'code_snippet', 'multiple_files']).optional()
+            }).optional(),
+            
+            // Code improvement data
+            improvements: z.object({
+                originalCode: z.string().optional(),
+                improvedCode: z.string(),
+                improvementType: z.enum(['performance', 'readability', 'security', 'optimization']).optional(),
+                diff: z.string().optional(),
+                suggestions: z.array(z.object({
+                    type: z.string(),
+                    description: z.string(),
+                    code: z.string().optional()
+                })).optional()
+            }).optional(),
+            
+            // Code review data
+            review: z.object({
+                reviewType: z.enum(['security', 'performance', 'comprehensive']).optional(),
+                issues: z.array(z.object({
+                    type: z.string(),
+                    severity: z.enum(['high', 'medium', 'low']),
+                    file: z.string().optional(),
+                    line: z.number().optional(),
+                    description: z.string(),
+                    suggestion: z.string()
+                })).optional(),
+                score: z.number().optional(),
+                summary: z.string().optional()
+            }).optional(),
+            
+            // Debug analysis data
+            debug: z.object({
+                diagnosis: z.string().optional(),
+                solutions: z.array(z.object({
+                    type: z.enum(['fix', 'workaround', 'investigation']),
+                    description: z.string(),
+                    code: z.string().optional(),
+                    priority: z.enum(['high', 'medium', 'low'])
+                })).optional(),
+                investigationSteps: z.array(z.string()).optional()
+            }).optional(),
+            
+            // Code explanation data
+            explanation: z.object({
+                detailLevel: z.enum(['brief', 'detailed', 'comprehensive']).optional(),
+                keyPoints: z.array(z.string()).optional(),
+                codeFlow: z.array(z.string()).optional(),
+                patterns: z.array(z.string()).optional(),
+                dependencies: z.array(z.string()).optional()
+            }).optional(),
+            
+            // Refactoring data
+            refactor: z.object({
+                refactoredCode: z.string().optional(),
+                changes: z.array(z.object({
+                    file: z.string(),
+                    changeType: z.enum(['create', 'modify', 'replace']),
+                    description: z.string()
+                })).optional(),
+                preserveAPI: z.boolean().optional(),
+                apiChanges: z.array(z.string()).optional()
+            }).optional(),
+            
+            // Performance metrics
+            performance: z.object({
+                processingTime: z.number().optional(), // milliseconds
+                responseTime: z.number().optional(),
+                tokenCount: z.number().optional(),
+                complexity: z.number().optional()
+            }).optional(),
+            
+            // User interaction data
+            userFeedback: z.object({
+                helpful: z.boolean().optional(),
+                rating: z.number().min(1).max(5).optional(),
+                feedback: z.string().optional(),
+                applied: z.boolean().optional(), // Did user apply the generated code
+                modified: z.boolean().optional() // Did user modify the generated code
+            }).optional(),
+            
+            // Additional context
+            contextFiles: z.array(z.string()).optional(),
+            sessionId: z.string().optional(),
+            timestamp: z.date().optional()
+        }).optional()
+    })
+    ).mutation(async ({ctx, input}) => {
+    try {
+        // Create the enhanced question record
+        const question = await ctx.db.question.create({
+            data: {
+                question: input.question,
+                answer: input.answer,
+                filesReferences: input.filesReferences || [],
+                projectId: input.projectId,
+                userId: ctx.user.userId!,
+                
+                // Enhanced fields
+                intent: input.metadata?.intent?.type || 'question',
+                confidence: input.metadata?.intent?.confidence,
+                processingTime: input.metadata?.performance?.processingTime,
+                satisfaction: input.metadata?.userFeedback?.rating
+            }
+        });
+
+        // Create AI interaction record for analytics
+        if (input.metadata?.intent) {
+            await ctx.db.aiInteraction.create({
+                data: {
+                    projectId: input.projectId,
+                    userId: ctx.user.userId!,
+                    intent: input.metadata.intent.type,
+                    query: input.question,
+                    confidence: input.metadata.intent.confidence,
+                    contextFiles: input.metadata.contextFiles || input.metadata.intent.targetFiles || [],
+                    metadata: {
+                        requiresCodeGen: input.metadata.intent.requiresCodeGen,
+                        requiresFileModification: input.metadata.intent.requiresFileModification,
+                        contextNeeded: input.metadata.intent.contextNeeded,
+                        ...input.metadata
+                    },
+                    responseType: input.metadata.generatedCode ? 'code' : 
+                                input.metadata.review ? 'review' : 
+                                input.metadata.debug ? 'debug' : 
+                                input.metadata.explanation ? 'explanation' : 'answer',
+                    responseTime: input.metadata.performance?.processingTime,
+                    helpful: input.metadata.userFeedback?.helpful,
+                    rating: input.metadata.userFeedback?.rating,
+                    feedback: input.metadata.userFeedback?.feedback
+                }
+            });
+        }
+
+        // Create code generation record if applicable
+        if (input.metadata?.generatedCode) {
+            await ctx.db.codeGeneration.create({
+                data: {
+                    projectId: input.projectId,
+                    userId: ctx.user.userId!,
+                    prompt: input.question,
+                    intent: input.metadata.intent?.type || 'code_generation',
+                    requirements: {
+                        language: input.metadata.generatedCode.language,
+                        filename: input.metadata.generatedCode.filename,
+                        type: input.metadata.generatedCode.type,
+                        contextFiles: input.metadata.contextFiles || []
+                    },
+                    generatedCode: input.metadata.generatedCode.content,
+                    filename: input.metadata.generatedCode.filename,
+                    language: input.metadata.generatedCode.language,
+                    linesOfCode: input.metadata.generatedCode.content.split('\n').length,
+                    applied: input.metadata.userFeedback?.applied || false,
+                    modified: input.metadata.userFeedback?.modified || false,
+                    satisfaction: input.metadata.userFeedback?.rating
+                }
+            });
+        }
+
+        // Update file analytics for referenced files
+        if (input.metadata?.contextFiles) {
+            for (const fileName of input.metadata.contextFiles) {
+                await ctx.db.fileAnalytics.upsert({
+                    where: {
+                        projectId_fileName: {
+                            projectId: input.projectId,
+                            fileName
+                        }
+                    },
+                    update: {
+                        queryCount: { increment: 1 },
+                        lastQueried: new Date(),
+                        contextUseCount: { increment: 1 }
+                    },
+                    create: {
+                        projectId: input.projectId,
+                        fileName,
+                        queryCount: 1,
+                        lastQueried: new Date(),
+                        contextUseCount: 1
+                    }
+                });
+            }
+        }
+
+        // Store suggestions feedback if provided
+        if (input.metadata?.userFeedback && input.metadata.intent) {
+            await ctx.db.suggestionFeedback.create({
+                data: {
+                    projectId: input.projectId,
+                    userId: ctx.user.userId!,
+                    suggestionType: input.metadata.intent.type === 'code_generation' ? 'smart_input' : 'intent_based',
+                    suggestion: input.answer.substring(0, 500), // Truncate for storage
+                    query: input.question,
+                    accepted: input.metadata.userFeedback.applied || false,
+                    helpful: input.metadata.userFeedback.helpful
+                }
+            });
+        }
+
+        return {
+            question,
+            saved: true,
+            analytics: {
+                aiInteractionCreated: !!input.metadata?.intent,
+                codeGenerationCreated: !!input.metadata?.generatedCode,
+                fileAnalyticsUpdated: input.metadata?.contextFiles?.length || 0,
+                suggestionFeedbackCreated: !!input.metadata?.userFeedback
+            }
+        };
+
+    } catch (error) {
+        console.error('Error saving enhanced answer:', error);
+        
+        // Fallback to basic save if enhanced save fails
+        const question = await ctx.db.question.create({
+            data: {
+                question: input.question,
+                answer: input.answer,
+                filesReferences: input.filesReferences || [],
+                projectId: input.projectId,
+                userId: ctx.user.userId!,
+                intent: input.metadata?.intent?.type || 'question'
+            }
+        });
+        
+        return {
+            question,
+            saved: true,
+            fallback: true,
+            error: error.message
+        };
+    }
+    }),
+
+    // New query to get enhanced question analytics
+    getQuestionAnalytics: protectedProcedure.input(
         z.object({
             projectId: z.string(),
-            question: z.string(),
-            answer: z.string(),
-            filesReferences: z.any()
+            timeRange: z.enum(['day', 'week', 'month', 'all']).optional().default('month')
         })
-    ).mutation(async ({ctx, input}) => {
-        const project = await ctx.db.question.create({
-            data: {
-                answer: input.answer,
-                filesReferences: input.filesReferences,
-                question: input.question,
-                projectId: input.projectId,
-                userId: ctx.user.userId!
-            }
-        })
-        return project
-    }),
-    getQuestions: protectedProcedure.input(
-        z.object({
-            projectId: z.string()
-        })).query(async({ctx, input}) => {
-            return await ctx.db.question.findMany({
+    ).query(async ({ctx, input}) => {
+        const timeFilter = input.timeRange === 'all' ? undefined : {
+            gte: new Date(Date.now() - (
+                input.timeRange === 'day' ? 24 * 60 * 60 * 1000 :
+                input.timeRange === 'week' ? 7 * 24 * 60 * 60 * 1000 :
+                30 * 24 * 60 * 60 * 1000 // month
+            ))
+        };
+
+        const [
+            intentDistribution,
+            codeGenerationStats,
+            userSatisfaction,
+            mostReferencedFiles,
+            recentInteractions
+        ] = await Promise.all([
+            // Intent distribution
+            ctx.db.aiInteraction.groupBy({
+                by: ['intent'],
                 where: {
-                    projectId: input.projectId
+                    projectId: input.projectId,
+                    ...(timeFilter && { createdAt: timeFilter })
                 },
-                include:{
-                    user: true
+                _count: { intent: true },
+                _avg: { confidence: true }
+            }),
+
+            // Code generation statistics
+            ctx.db.codeGeneration.aggregate({
+                where: {
+                    projectId: input.projectId,
+                    ...(timeFilter && { createdAt: timeFilter })
                 },
-                orderBy: {
-                    createdAt: 'desc'
+                _count: { id: true },
+                _avg: { 
+                    satisfaction: true,
+                    linesOfCode: true 
+                },
+                _sum: { 
+                    applied: true,
+                    modified: true 
+                } as any
+            }),
+
+            // User satisfaction metrics
+            ctx.db.aiInteraction.aggregate({
+                where: {
+                    projectId: input.projectId,
+                    rating: { not: null },
+                    ...(timeFilter && { createdAt: timeFilter })
+                },
+                _avg: { rating: true },
+                _count: { helpful: true }
+            }),
+
+            // Most referenced files
+            ctx.db.fileAnalytics.findMany({
+                where: { projectId: input.projectId },
+                orderBy: { queryCount: 'desc' },
+                take: 10,
+                select: {
+                    fileName: true,
+                    queryCount: true,
+                    contextUseCount: true,
+                    lastQueried: true
+                }
+            }),
+
+            // Recent interactions
+            ctx.db.aiInteraction.findMany({
+                where: {
+                    projectId: input.projectId,
+                    ...(timeFilter && { createdAt: timeFilter })
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 20,
+                select: {
+                    intent: true,
+                    confidence: true,
+                    helpful: true,
+                    rating: true,
+                    createdAt: true,
+                    responseTime: true
                 }
             })
+        ]);
+
+        return {
+            intentDistribution,
+            codeGeneration: {
+                totalGenerated: codeGenerationStats._count.id,
+                avgSatisfaction: codeGenerationStats._avg.satisfaction,
+                avgLinesOfCode: codeGenerationStats._avg.linesOfCode,
+                totalApplied: codeGenerationStats._sum.applied,
+                totalModified: codeGenerationStats._sum.modified,
+                applicationRate: codeGenerationStats._count.id > 0 ? 
+                    (codeGenerationStats._sum.applied || 0) / codeGenerationStats._count.id : 0
+            },
+            satisfaction: {
+                avgRating: userSatisfaction._avg.rating,
+                totalRatings: userSatisfaction._count.helpful
+            },
+            mostReferencedFiles,
+            recentInteractions,
+            timeRange: input.timeRange
+        };
+    }),
+    // src/server/api/routers/project.ts - Enhanced getQuestions query
+
+    getQuestions: protectedProcedure.input(
+        z.object({
+            projectId: z.string(),
+            // Add filtering options
+            intent: z.enum(['question', 'code_generation', 'code_improvement', 'code_review', 'refactor', 'debug', 'explain']).optional(),
+            timeRange: z.enum(['day', 'week', 'month', 'all']).optional().default('all'),
+            sortBy: z.enum(['createdAt', 'satisfaction', 'confidence']).optional().default('createdAt'),
+            sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+            limit: z.number().min(1).max(100).optional().default(50)
+        })
+    ).query(async ({ ctx, input }) => {
+        const timeFilter = input.timeRange === 'all' ? undefined : {
+            gte: new Date(Date.now() - (
+                input.timeRange === 'day' ? 24 * 60 * 60 * 1000 :
+                input.timeRange === 'week' ? 7 * 24 * 60 * 60 * 1000 :
+                30 * 24 * 60 * 60 * 1000 // month
+            ))
+        };
+
+        const questions = await ctx.db.question.findMany({
+            where: {
+                projectId: input.projectId,
+                ...(input.intent && { intent: input.intent }),
+                ...(timeFilter && { createdAt: timeFilter })
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        firstName: true,
+                        lastName: true
+                    }
+                }
+            },
+            orderBy: {
+                [input.sortBy]: input.sortOrder
+            },
+            take: input.limit
+        });
+
+        // Enrich questions with analytics data
+        const enrichedQuestions = await Promise.all(
+            questions.map(async (question) => {
+                // Get related AI interactions
+                const aiInteractions = await ctx.db.aiInteraction.findMany({
+                    where: {
+                        projectId: input.projectId,
+                        userId: question.userId,
+                        query: question.question
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                });
+
+                // Get related code generations if applicable
+                const codeGenerations = question.intent === 'code_generation' ? 
+                    await ctx.db.codeGeneration.findMany({
+                        where: {
+                            projectId: input.projectId,
+                            userId: question.userId,
+                            prompt: question.question
+                        },
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    }) : [];
+
+                // Parse metadata safely
+                let parsedMetadata = null;
+                try {
+                    parsedMetadata = question.metadata ? 
+                        (typeof question.metadata === 'string' ? 
+                            JSON.parse(question.metadata) : 
+                            question.metadata) : null;
+                } catch (error) {
+                    console.warn(`Failed to parse metadata for question ${question.id}:`, error);
+                }
+
+                return {
+                    ...question,
+                    metadata: parsedMetadata,
+                    analytics: {
+                        interactions: aiInteractions,
+                        codeGenerations: codeGenerations,
+                        hasEnhancedData: !!(aiInteractions.length || codeGenerations.length),
+                        estimatedImpact: calculateQuestionImpact(question, aiInteractions, codeGenerations)
+                    },
+                    // Enhanced display properties
+                    displayProperties: {
+                        intentIcon: getIntentIcon(question.intent),
+                        intentColor: getIntentColor(question.intent),
+                        confidenceLevel: getConfidenceLevel(question.confidence),
+                        satisfactionLevel: getSatisfactionLevel(question.satisfaction),
+                        hasGeneratedCode: !!(parsedMetadata?.generatedCode || codeGenerations.length > 0),
+                        hasFileReferences: !!(question.filesReferences && Array.isArray(question.filesReferences) && question.filesReferences.length > 0),
+                        processingTimeFormatted: question.processingTime ? 
+                            formatProcessingTime(question.processingTime) : null
+                    }
+                };
+            })
+        );
+
+        // Get summary statistics
+        const statistics = await getQuestionStatistics(ctx.db, input.projectId, input.timeRange);
+
+        return {
+            questions: enrichedQuestions,
+            statistics,
+            filters: {
+                intent: input.intent,
+                timeRange: input.timeRange,
+                sortBy: input.sortBy,
+                sortOrder: input.sortOrder
+            },
+            pagination: {
+                total: enrichedQuestions.length,
+                limit: input.limit,
+                hasMore: enrichedQuestions.length === input.limit
+            }
+        };
+    }),
+
+    // Helper query to get detailed question statistics
+    getQuestionStatistics: protectedProcedure.input(
+        z.object({
+            projectId: z.string(),
+            timeRange: z.enum(['day', 'week', 'month', 'all']).optional().default('month')
+        })
+    ).query(async ({ ctx, input }) => {
+        return await getQuestionStatistics(ctx.db, input.projectId, input.timeRange);
     }),
     uploadMeeting: protectedProcedure.input(z.object({
         projectId: z.string(),

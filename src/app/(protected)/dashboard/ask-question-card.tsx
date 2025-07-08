@@ -42,6 +42,7 @@ import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-s
 import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { CodeBlock } from '@/components/code/enhanced-code-block';
 import { DiffViewer } from '@/components/code/diff-viewer';
+import { EnhancedSaveButton } from '@/components/feedback/enhanced-save-button';
 
 // Enhanced response structure
 interface EnhancedResponse {
@@ -295,7 +296,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'answer',
-            content: qaResult.answer || '',
+            content: String(qaResult.answer) || '',
             intent,
             filesReferences: qaResult.filesReferences
           });
@@ -341,23 +342,140 @@ const EnhancedAskQuestionCardContent = () => {
   };
 
   const saveCurrentResponse = () => {
-    if (!response || !project) return;
+  if (!response || !project) return;
 
-    saveAnswer.mutate({
-      projectId: project.id,
-      question,
-      answer: response.content,
-      filesReferences: response.filesReferences || []
-    }, {
-      onSuccess: () => {
-        toast.success('Response saved successfully');
-        refetch();
-      },
-      onError: () => {
-        toast.error('Failed to save response');
-      }
-    });
+  // Gather enhanced metadata
+  const enhancedMetadata = {
+    // Intent classification data
+    intent: response.intent ? {
+      type: response.intent.type,
+      confidence: response.intent.confidence,
+      requiresCodeGen: response.intent.requiresCodeGen,
+      requiresFileModification: response.intent.requiresFileModification,
+      contextNeeded: response.intent.contextNeeded,
+      targetFiles: response.intent.targetFiles || []
+    } : undefined,
+
+    // Generated code data
+    generatedCode: response.metadata?.generatedCode ? {
+      content: response.metadata.generatedCode,
+      language: response.metadata.language || 'typescript',
+      filename: response.metadata.filename || `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
+      type: response.type === 'new_file' ? 'new_file' as const : 
+            response.type === 'file_modification' ? 'file_modification' as const :
+            'code_snippet' as const
+    } : undefined,
+
+    // Code improvements data
+    improvements: response.intent?.type === 'code_improvement' && response.metadata?.generatedCode ? {
+      improvedCode: response.metadata.generatedCode,
+      improvementType: 'optimization' as const, // Could be detected from query
+      diff: response.metadata.diff,
+      suggestions: response.metadata.suggestions?.map(s => ({
+        type: s.type,
+        description: s.description,
+        code: s.code
+      }))
+    } : undefined,
+
+    // Code review data
+    review: response.intent?.type === 'code_review' ? {
+      reviewType: 'comprehensive' as const, // Could be extracted from query
+      issues: response.metadata?.issues?.map(issue => ({
+        type: issue.type,
+        severity: issue.severity,
+        file: issue.file,
+        line: issue.line,
+        description: issue.description,
+        suggestion: issue.suggestion
+      })),
+      score: response.metadata?.score,
+      summary: response.content
+    } : undefined,
+
+    // Debug analysis data
+    debug: response.intent?.type === 'debug' ? {
+      diagnosis: response.content,
+      solutions: response.metadata?.suggestions?.map(s => ({
+        type: 'fix' as const,
+        description: s.description,
+        code: s.code,
+        priority: 'medium' as const
+      })),
+      investigationSteps: response.metadata?.investigationSteps || []
+    } : undefined,
+
+    // Code explanation data
+    explanation: response.intent?.type === 'explain' ? {
+      detailLevel: 'detailed' as const,
+      keyPoints: response.metadata?.keyPoints || [],
+      codeFlow: response.metadata?.codeFlow || [],
+      patterns: response.metadata?.patterns || [],
+      dependencies: response.metadata?.dependencies || []
+    } : undefined,
+
+    // Refactoring data
+    refactor: response.intent?.type === 'refactor' ? {
+      refactoredCode: response.metadata?.generatedCode,
+      changes: response.metadata?.files?.map(f => ({
+        file: f.path,
+        changeType: f.changeType,
+        description: `${f.changeType} ${f.path}`
+      })) || [],
+      preserveAPI: true, // Default assumption
+      apiChanges: response.metadata?.warnings?.filter(w => w.includes('API')) || []
+    } : undefined,
+
+    // Performance metrics
+    performance: {
+      processingTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
+      responseTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
+      complexity: response.metadata?.complexity
+    },
+
+    // Context files
+    contextFiles: selectedFiles.length > 0 ? selectedFiles : response.metadata?.files || [],
+
+    // Session info
+    sessionId: Date.now().toString(), // Simple session tracking
+    timestamp: new Date()
   };
+
+  console.log('Saving enhanced response with metadata:', enhancedMetadata);
+
+  saveAnswer.mutate({
+    projectId: project.id,
+    question,
+    answer: response.content,
+    filesReferences: response.filesReferences || [],
+    metadata: enhancedMetadata
+  }, {
+    onSuccess: (result) => {
+      toast.success('Response saved successfully');
+      
+      // Show analytics info if available
+      if (result.analytics) {
+        const analyticsMsg = [
+          result.analytics.aiInteractionCreated && 'AI interaction tracked',
+          result.analytics.codeGenerationCreated && 'Code generation recorded',
+          result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
+          result.analytics.suggestionFeedbackCreated && 'Feedback recorded'
+        ].filter(Boolean).join(', ');
+        
+        if (analyticsMsg) {
+          toast.success(`Analytics: ${analyticsMsg}`, { duration: 3000 });
+        }
+      }
+      
+      refetch();
+    },
+    onError: (error) => {
+      console.error('Failed to save response:', error);
+      toast.error('Failed to save response: ' + error.message);
+    }
+  });
+};
+
 
   const SmartSuggestions = () => (
     <div className="flex flex-wrap gap-2 mb-4">
@@ -426,16 +544,14 @@ const EnhancedAskQuestionCardContent = () => {
                     <span className="ml-1">{response.intent.type.replace('_', ' ')}</span>
                   </Badge>
                   
-                  <Button 
-                    disabled={saveAnswer.isPending} 
-                    variant={'outline'} 
-                    size="sm"
-                    className="border-white/20 bg-white/10 text-white"
-                    onClick={saveCurrentResponse}
-                  >
-                    <Save className="h-4 w-4 mr-1" />
-                    Save
-                  </Button>
+                  <EnhancedSaveButton 
+                    response={response}
+                    project={project ?? null}
+                    question={question}
+                    selectedFiles={selectedFiles}
+                    saveAnswer={saveAnswer}
+                    refetch={refetch}
+                  />
                 </div>
               )}
             </div>

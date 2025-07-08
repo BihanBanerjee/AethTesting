@@ -136,6 +136,8 @@ model Issue {
   meeting      Meeting   @relation(fields: [meetingId], references: [id])
 }
 
+// Updates to add to your existing Prisma schema.prisma file
+
 model Question {
   id           String    @id @default(cuid())
   createdAt    DateTime  @default(now())
@@ -146,17 +148,225 @@ model Question {
 
   filesReferences Json?
   projectId     String
+  userId       String
 
   project      Project   @relation(fields: [projectId], references: [id])
-  userId       String
   user         User       @relation(fields: [userId], references: [id])
   
-  // New: Enhanced question metadata
+  // Enhanced fields for AI interactions
   intent       String?   // 'code_generation', 'debug', 'review', etc.
   confidence   Float?    // Intent classification confidence
   processingTime Int?    // Time taken to process in milliseconds
   satisfaction Int?      // User satisfaction rating (1-5)
+  
+  // Additional metadata stored as JSON for flexibility
+  metadata     Json?     // Store all the rich interaction data
+  
+  @@index([projectId, intent])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([intent, satisfaction])
 }
+
+// Update the AiInteraction model to be more comprehensive
+model AiInteraction {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+  
+  userId       String    // Reference to user without direct relation for flexibility
+  
+  // Core interaction details
+  intent       String    // 'code_generation', 'debug', 'review', etc.
+  query        String    // Original user query
+  confidence   Float?    // Intent classification confidence
+  
+  // Context information
+  contextFiles Json?     // Files selected for context
+  metadata     Json?     // Additional metadata about the interaction
+  
+  // Response information
+  responseType String?   // 'code', 'explanation', 'review', etc.
+  responseTime Int?      // Processing time in milliseconds
+  success      Boolean   @default(true)
+  errorMessage String?   // Error message if failed
+  
+  // User feedback
+  helpful      Boolean?  // User feedback on helpfulness
+  rating       Int?      // User rating (1-5)
+  feedback     String?   // User feedback text
+  
+  // Analytics fields
+  tokenCount   Int?      // Number of tokens used
+  modelUsed    String?   // Which AI model was used
+  
+  @@index([projectId, intent])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([intent, rating])
+  @@index([responseType, success])
+}
+
+// Update CodeGeneration model with more analytics
+model CodeGeneration {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id])
+  
+  userId       String    // Reference to user
+  
+  // Generation details
+  prompt       String    // Original generation prompt
+  intent       String    // Specific intent type
+  
+  // Requirements and context
+  requirements Json?     // Framework, language, features, constraints
+  contextFiles Json?     // Files used for context
+  
+  // Generated content
+  generatedCode String?  // The generated code
+  filename     String?   // Target filename
+  language     String?   // Programming language
+  
+  // Quality metrics
+  complexity   Int?      // Code complexity score
+  linesOfCode  Int?      // Generated lines of code
+  
+  // User interaction
+  applied      Boolean   @default(false) // Whether user applied the code
+  modified     Boolean   @default(false) // Whether user modified the code
+  satisfaction Int?      // User satisfaction (1-5)
+  
+  // Analytics
+  modelUsed    String?   // Which AI model was used
+  tokenCount   Int?      // Tokens consumed
+  generationTime Int?    // Time taken to generate
+  
+  // Business impact
+  timesSaved   Int?      // Estimated time saved in minutes
+  
+  @@index([projectId, intent])
+  @@index([projectId, createdAt])
+  @@index([userId, createdAt])
+  @@index([applied, satisfaction])
+  @@index([language, linesOfCode])
+}
+
+// Enhanced FileAnalytics model
+model FileAnalytics {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  projectId    String
+  fileName     String
+  
+  // Usage metrics
+  queryCount   Int       @default(0) // How often this file is referenced in queries
+  lastQueried  DateTime? // Last time this file was referenced
+  
+  // AI context metrics
+  contextUseCount Int    @default(0) // How often used as context
+  successRate  Float?   // Success rate when used as context
+  
+  // Code quality metrics
+  complexity   Int?     // Current complexity score
+  maintainabilityIndex Float? // Maintainability index
+  
+  // User interaction patterns
+  avgUserRating Float?  // Average rating when this file is involved
+  totalInteractions Int @default(0) // Total AI interactions involving this file
+  
+  // Change tracking
+  lastModified DateTime? // Last modification date from git
+  changeFrequency Float? // How often this file changes
+  
+  @@unique([projectId, fileName])
+  @@index([projectId, queryCount])
+  @@index([projectId, contextUseCount])
+  @@index([queryCount, successRate])
+}
+
+// Add a new model for detailed interaction analytics
+model InteractionAnalytics {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+
+  projectId    String
+  userId       String
+  
+  // Time-based analytics
+  date         DateTime  // Date for aggregation (daily/weekly/monthly)
+  timeframe    String    // 'daily', 'weekly', 'monthly'
+  
+  // Interaction counts by intent
+  codeGenerationCount Int @default(0)
+  debugCount         Int @default(0)
+  reviewCount        Int @default(0)
+  explainCount       Int @default(0)
+  improveCount       Int @default(0)
+  refactorCount      Int @default(0)
+  questionCount      Int @default(0)
+  
+  // Quality metrics
+  avgSatisfaction    Float?
+  avgConfidence      Float?
+  avgResponseTime    Float?
+  successRate        Float?
+  
+  // Code generation specific
+  totalCodeGenerated Int @default(0)
+  totalLinesGenerated Int @default(0)
+  codeApplicationRate Float?
+  
+  // User engagement
+  totalTokensUsed    Int @default(0)
+  activeDays         Int @default(0)
+  
+  @@unique([projectId, userId, date, timeframe])
+  @@index([projectId, date])
+  @@index([userId, date])
+  @@index([timeframe, date])
+}
+
+// Enhanced SuggestionFeedback model
+model SuggestionFeedback {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  
+  projectId    String
+  userId       String
+  
+  // Suggestion details
+  suggestionType String  // 'smart_input', 'file_context', 'intent_based'
+  suggestion   String   // The actual suggestion text
+  query        String   // User's current query when suggestion was shown
+  
+  // Context
+  contextFiles Json?    // Files that were in context when suggestion was made
+  intent       String?  // Detected intent when suggestion was made
+  
+  // User interaction
+  accepted     Boolean  // Whether user accepted the suggestion
+  helpful      Boolean? // User feedback on helpfulness
+  
+  // Analytics
+  suggestionRank Int?   // Position of suggestion in list (1st, 2nd, etc.)
+  timeToDecision Int?   // Time taken to accept/reject in milliseconds
+  
+  @@index([projectId, suggestionType])
+  @@index([projectId, accepted])
+  @@index([suggestionType, accepted])
+  @@index([createdAt, accepted])
+}
+
+
 
 enum CommitProcessingStatus {
   PROCESSING
@@ -195,124 +405,4 @@ model StripeTransction {
   user         User      @relation(fields: [userId], references: [id])
 
   credits      Int      
-}
-
-// New: AI Interaction tracking for analytics and improvements
-model AiInteraction {
-  id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  projectId    String
-  project      Project   @relation(fields: [projectId], references: [id])
-  
-  userId       String    // Reference to user without direct relation for flexibility
-  
-  // Interaction details
-  intent       String    // 'code_generation', 'debug', 'review', etc.
-  query        String    // Original user query
-  confidence   Float?    // Intent classification confidence
-  
-  // Context information
-  contextFiles Json?     // Files selected for context
-  metadata     Json?     // Additional metadata about the interaction
-  
-  // Response information
-  responseType String?   // 'code', 'explanation', 'review', etc.
-  responseTime Int?      // Processing time in milliseconds
-  success      Boolean   @default(true)
-  errorMessage String?   // Error message if failed
-  
-  // User feedback
-  helpful      Boolean?  // User feedback on helpfulness
-  rating       Int?      // User rating (1-5)
-  feedback     String?   // User feedback text
-  
-  @@index([projectId, intent])
-  @@index([projectId, createdAt])
-  @@index([userId, createdAt])
-}
-
-// New: Code Generation tracking for better AI training
-model CodeGeneration {
-  id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  projectId    String
-  project      Project   @relation(fields: [projectId], references: [id])
-  
-  userId       String    // Reference to user
-  
-  // Generation details
-  prompt       String    // Original generation prompt
-  intent       String    // Specific intent type
-  
-  // Requirements and context
-  requirements Json?     // Framework, language, features, constraints
-  contextFiles Json?     // Files used for context
-  
-  // Generated content
-  generatedCode String?  // The generated code
-  filename     String?   // Target filename
-  language     String?   // Programming language
-  
-  // Quality metrics
-  complexity   Int?      // Code complexity score
-  linesOfCode  Int?      // Generated lines of code
-  
-  // User interaction
-  applied      Boolean   @default(false) // Whether user applied the code
-  modified     Boolean   @default(false) // Whether user modified the code
-  satisfaction Int?      // User satisfaction (1-5)
-  
-  @@index([projectId, intent])
-  @@index([projectId, createdAt])
-  @@index([userId, createdAt])
-}
-
-// New: File Analytics for understanding codebase patterns
-model FileAnalytics {
-  id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  projectId    String
-  fileName     String
-  
-  // Usage metrics
-  queryCount   Int       @default(0) // How often this file is referenced in queries
-  lastQueried  DateTime? // Last time this file was referenced
-  
-  // AI context metrics
-  contextUseCount Int    @default(0) // How often used as context
-  successRate  Float?   // Success rate when used as context
-  
-  // Code quality metrics
-  complexity   Int?     // Current complexity score
-  maintainability Float? // Maintainability index
-  
-  @@unique([projectId, fileName])
-  @@index([projectId, queryCount])
-}
-
-// New: Smart Suggestions tracking for improvement
-model SuggestionFeedback {
-  id           String    @id @default(cuid())
-  createdAt    DateTime  @default(now())
-  
-  projectId    String
-  userId       String
-  
-  // Suggestion details
-  suggestionType String  // 'smart_input', 'file_context', 'intent_based'
-  suggestion   String   // The actual suggestion text
-  query        String   // User's current query when suggestion was shown
-  
-  // User interaction
-  accepted     Boolean  // Whether user accepted the suggestion
-  helpful      Boolean? // User feedback on helpfulness
-  
-  @@index([projectId, suggestionType])
-  @@index([projectId, accepted])
 }
