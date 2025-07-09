@@ -73,6 +73,18 @@ export const EnhancedSaveButton: React.FC<EnhancedSaveButtonProps> = ({
   const buildEnhancedMetadata = (feedback?: any) => {
     if (!response) return {};
 
+    // Create filesReferences for generated code if it doesn't exist
+    let enhancedFilesReferences = response.filesReferences || [];
+    
+    // If we have generated code but no filesReferences, create them
+    if (response.metadata?.generatedCode && enhancedFilesReferences.length === 0) {
+      enhancedFilesReferences = [{
+        fileName: `generated-${response.intent?.type || 'code'}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
+        sourceCode: response.metadata.generatedCode,
+        summary: `Generated ${response.intent?.type || 'code'} - ${response.content.substring(0, 100)}...`
+      }];
+    }
+
     return {
       // Intent classification data
       intent: response.intent ? {
@@ -153,6 +165,9 @@ export const EnhancedSaveButton: React.FC<EnhancedSaveButtonProps> = ({
         responseTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
       },
 
+      // Enhanced filesReferences
+      filesReferences: enhancedFilesReferences,
+
       // Context files
       contextFiles: selectedFiles.length > 0 ? selectedFiles : response.metadata?.files || [],
 
@@ -173,13 +188,26 @@ export const EnhancedSaveButton: React.FC<EnhancedSaveButtonProps> = ({
 
     const enhancedMetadata = buildEnhancedMetadata(feedback);
 
+    // Create enhanced filesReferences for generated code
+    let finalFilesReferences = response.filesReferences || [];
+
+    // If we have generated code but no filesReferences, create them
+    if (response.metadata?.generatedCode && finalFilesReferences.length === 0) {
+      finalFilesReferences = [{
+        fileName: `generated-${response.intent?.type || 'code'}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
+        sourceCode: response.metadata.generatedCode,
+        summary: `Generated ${response.intent?.type || 'code'} - ${response.content.substring(0, 100)}...`
+      }];
+    }
+
     console.log('Saving enhanced response with metadata:', enhancedMetadata);
+    console.log('Final filesReferences:', finalFilesReferences);
 
     saveAnswer.mutate({
       projectId: project.id,
       question,
       answer: response.content,
-      filesReferences: response.filesReferences || [],
+      filesReferences: finalFilesReferences, // Use the enhanced filesReferences
       metadata: enhancedMetadata
     }, {
       onSuccess: (result) => {

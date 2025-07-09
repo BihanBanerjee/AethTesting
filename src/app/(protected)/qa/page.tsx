@@ -21,6 +21,19 @@ import EnhancedAskQuestionCard from '../dashboard/ask-question-card';
 
 // Enhanced Question Card component
 const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
+  let parsedMetadata = null;
+  try {
+    parsedMetadata = question.metadata ? 
+      (typeof question.metadata === 'string' ? 
+        JSON.parse(question.metadata) : 
+        question.metadata) : null;
+  } catch (error) {
+    console.warn(`Failed to parse metadata for question ${question.id}:`, error);
+  }
+  // Check if we have generated code
+  const hasGeneratedCode = !!(parsedMetadata?.generatedCode || 
+                             parsedMetadata?.improvements?.improvedCode ||
+                             parsedMetadata?.refactor?.refactoredCode);
   return (
     <motion.div 
       key={question.id}
@@ -63,7 +76,8 @@ const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
                       {question.displayProperties.satisfactionLevel}
                     </Badge>
                   )}
-                  {question.displayProperties.hasGeneratedCode && (
+                  {/* Show generated code badge */}
+                  {hasGeneratedCode && (
                     <Badge variant="outline" className="text-xs border-green-500/30 text-green-300">
                       <Code className="h-3 w-3 mr-1" />
                       Code Generated
@@ -94,7 +108,15 @@ const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
           
           <div className='flex justify-between items-center mt-3 text-sm'>
             <div className="flex items-center gap-4 text-white/50">
-              <span>{question.filesReferences?.length || 0} file references</span>
+              <span>
+                {/* Show file references OR generated code count */}
+                {question.filesReferences?.length > 0 ? 
+                  `${question.filesReferences.length} file references` :
+                  hasGeneratedCode ? 
+                    '1 generated file' :
+                    '0 file references'
+                }
+              </span>
               {question.displayProperties.processingTimeFormatted && (
                 <span className="flex items-center">
                   <Zap className="h-3 w-3 mr-1" />
@@ -119,6 +141,7 @@ const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
       </Card>
     </motion.div>
   );
+
 };
 
 // Statistics Overview Component

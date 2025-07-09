@@ -215,7 +215,13 @@ const EnhancedAskQuestionCardContent = () => {
               warnings: result.warnings,
               dependencies: result.dependencies,
               files: result.files?.map((f: any) => f.path) || []
-            }
+            },
+            // ADD THIS: Create filesReferences for generated code to display in Code tab
+            filesReferences: result.generatedCode ? [{
+              fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.language === 'typescript' ? 'ts' : 'js'}`,
+              sourceCode: result.generatedCode,
+              summary: `Generated ${intent.type} code`
+            }] : []
           });
           break;
 
@@ -235,7 +241,12 @@ const EnhancedAskQuestionCardContent = () => {
               generatedCode: result.improvedCode,
               diff: result.diff,
               suggestions: result.suggestions
-            }
+            },
+            filesReferences: result.improvedCode ? [{
+              fileName: `improved-${intent.targetFiles?.[0] || 'code'}.${result.language || 'ts'}`,
+              sourceCode: result.improvedCode,
+              summary: `Improved code with ${intent.type}`
+            }] : []
           });
           break;
 
@@ -340,7 +351,7 @@ const EnhancedAskQuestionCardContent = () => {
             type: 'answer',
             content: content,
             intent,
-            filesReferences: qaResult.filesReferences
+            filesReferences: qaResult.filesReferences || []
           });
           break;
       }
