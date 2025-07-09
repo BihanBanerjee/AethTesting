@@ -76,13 +76,22 @@ export class IntentClassifier {
     } catch (error) {
       console.error('Intent classification failed:', error);
       
-      // If it's an API key error, provide helpful feedback
-      if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
+      // Enhanced error handling for different error types
+      if (error.message?.includes('503') || error.message?.includes('overloaded')) {
+        console.warn('🚨 Gemini API is temporarily overloaded. Using fallback classification.');
+        console.warn('💡 This is normal during high traffic periods. The fallback will work fine!');
+      } else if (error.message?.includes('API key not valid') || error.message?.includes('API_KEY_INVALID')) {
         console.error('🔑 Gemini API key is invalid or missing. Please check your environment variables.');
         console.error('Make sure GEMINI_API_KEY is set in your .env file');
+      } else if (error.message?.includes('429') || error.message?.includes('quota')) {
+        console.warn('📈 API quota exceeded. Using fallback classification.');
+      } else if (error.message?.includes('network') || error.message?.includes('ECONNRESET')) {
+        console.warn('🌐 Network error connecting to Gemini API. Using fallback classification.');
+      } else {
+        console.error('❌ Unexpected error during intent classification:', error.message);
       }
       
-      // Fallback classification based on keywords
+      // Always fallback to keyword-based classification
       return this.fallbackClassification(query);
     }
   }
@@ -90,13 +99,14 @@ export class IntentClassifier {
   private fallbackClassification(query: string): QueryIntent {
     const lowerQuery = query.toLowerCase();
     
-    console.log('Using fallback intent classification for:', query);
+    console.log('🔄 Using fallback intent classification for:', query.substring(0, 50) + '...');
     
     // Code generation patterns
     if (this.matchesPatterns(lowerQuery, [
       'create', 'generate', 'write', 'build', 'implement', 'add new',
       'make a', 'develop', 'code for', 'function that', 'component that'
     ])) {
+      console.log('✅ Classified as: code_generation (fallback)');
       return {
         type: 'code_generation',
         confidence: 0.7,
@@ -112,6 +122,7 @@ export class IntentClassifier {
       'improve', 'optimize', 'enhance', 'better', 'performance',
       'make faster', 'more efficient', 'cleaner', 'simplify'
     ])) {
+      console.log('✅ Classified as: code_improvement (fallback)');
       return {
         type: 'code_improvement',
         confidence: 0.7,
@@ -127,6 +138,7 @@ export class IntentClassifier {
       'refactor', 'restructure', 'reorganize', 'move', 'extract',
       'rename', 'split', 'combine', 'merge'
     ])) {
+      console.log('✅ Classified as: refactor (fallback)');
       return {
         type: 'refactor',
         confidence: 0.7,
@@ -142,6 +154,7 @@ export class IntentClassifier {
       'bug', 'error', 'fix', 'issue', 'problem', 'not working',
       'broken', 'debug', 'troubleshoot'
     ])) {
+      console.log('✅ Classified as: debug (fallback)');
       return {
         type: 'debug',
         confidence: 0.8,
@@ -157,6 +170,7 @@ export class IntentClassifier {
       'review', 'check', 'validate', 'audit', 'security',
       'best practices', 'code quality'
     ])) {
+      console.log('✅ Classified as: code_review (fallback)');
       return {
         type: 'code_review',
         confidence: 0.7,
@@ -172,6 +186,7 @@ export class IntentClassifier {
       'explain', 'how does', 'what is', 'understand', 'clarify',
       'walk through', 'breakdown'
     ])) {
+      console.log('✅ Classified as: explain (fallback)');
       return {
         type: 'explain',
         confidence: 0.8,
@@ -183,6 +198,7 @@ export class IntentClassifier {
     }
 
     // Default to question
+    console.log('✅ Classified as: question (fallback default)');
     return {
       type: 'question',
       confidence: 0.5,

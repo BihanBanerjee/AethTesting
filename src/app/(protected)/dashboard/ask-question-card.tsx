@@ -1,4 +1,4 @@
-// src/app/(protected)/dashboard/ask-question-card.tsx - Updated with Integration
+// src/app/(protected)/dashboard/ask-question-card.tsx - FIXED VERSION
 'use client'
 import MDEditor from '@uiw/react-md-editor'
 import { Button } from '@/components/ui/button';
@@ -160,6 +160,17 @@ const EnhancedAskQuestionCardContent = () => {
     }
   };
 
+  // Simple helper function for other response types
+  const extractSimpleContent = (result: any): string => {
+    if (typeof result === 'string') return result;
+    if (result.explanation) return String(result.explanation);
+    if (result.summary) return String(result.summary);
+    if (result.diagnosis) return String(result.diagnosis);
+    if (result.answer) return String(result.answer);
+    if (result.response) return String(result.response);
+    return JSON.stringify(result, null, 2);
+  };
+
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!project?.id || !question.trim()) return;
@@ -179,6 +190,8 @@ const EnhancedAskQuestionCardContent = () => {
       let result: any;
       setProcessingStage('generating');
 
+      console.log('🎯 Processing intent:', intent.type);
+
       // Route to appropriate handler based on intent
       switch (intent.type) {
         case 'code_generation':
@@ -194,7 +207,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'code',
-            content: result.explanation || 'Code generated successfully',
+            content: extractSimpleContent(result),
             intent,
             metadata: {
               generatedCode: result.generatedCode,
@@ -216,7 +229,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'code',
-            content: result.explanation || 'Code improvements generated',
+            content: extractSimpleContent(result),
             intent,
             metadata: {
               generatedCode: result.improvedCode,
@@ -236,7 +249,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'review',
-            content: result.summary || 'Code review completed',
+            content: extractSimpleContent(result),
             intent,
             metadata: {
               issues: result.issues,
@@ -256,7 +269,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'debug',
-            content: result.diagnosis || 'Debug analysis completed',
+            content: extractSimpleContent(result),
             intent,
             metadata: {
               suggestions: result.solutions?.map((s: any) => ({
@@ -278,7 +291,7 @@ const EnhancedAskQuestionCardContent = () => {
 
           setResponse({
             type: 'explanation',
-            content: result.explanation || 'Code explanation provided',
+            content: extractSimpleContent(result),
             intent,
             metadata: {
               files: result.filesAnalyzed
@@ -287,19 +300,49 @@ const EnhancedAskQuestionCardContent = () => {
           break;
 
         default:
-          // Fallback to general Q&A
+          // Fallback to general Q&A - FIXED VERSION
+          console.log('🔄 Using fallback askQuestion');
           const qaResult = await askQuestion.mutateAsync({
             projectId: project.id,
             query: question,
             contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
           });
 
+          console.log('📝 QA Result:', qaResult);
+
+          // The key issue: qaResult.output is a streamable value that needs to be consumed
+          let content = '';
+          if (qaResult.output && typeof qaResult.output === 'object') {
+            // If it's a streamable value, we need to read it properly
+            try {
+              // Try to read the streamable value chunks
+              const chunks = [];
+              for await (const chunk of qaResult.output) {
+                chunks.push(chunk);
+              }
+              content = chunks.join('');
+            } catch (error) {
+              console.error('Error reading stream:', error);
+              // Fallback: try to get the value directly
+              content = qaResult.output.value || qaResult.output.toString();
+            }
+          } else if (qaResult.output) {
+            content = String(qaResult.output);
+          } else if (qaResult.answer) {
+            content = String(qaResult.answer);
+          } else {
+            content = 'No response available';
+          }
+
+          console.log('✅ Extracted content:', content);
+
           setResponse({
             type: 'answer',
-            content: String(qaResult.answer) || '',
+            content: content,
             intent,
             filesReferences: qaResult.filesReferences
           });
+          break;
       }
 
       setProcessingStage('complete');
@@ -342,140 +385,139 @@ const EnhancedAskQuestionCardContent = () => {
   };
 
   const saveCurrentResponse = () => {
-  if (!response || !project) return;
+    if (!response || !project) return;
 
-  // Gather enhanced metadata
-  const enhancedMetadata = {
-    // Intent classification data
-    intent: response.intent ? {
-      type: response.intent.type,
-      confidence: response.intent.confidence,
-      requiresCodeGen: response.intent.requiresCodeGen,
-      requiresFileModification: response.intent.requiresFileModification,
-      contextNeeded: response.intent.contextNeeded,
-      targetFiles: response.intent.targetFiles || []
-    } : undefined,
+    // Gather enhanced metadata
+    const enhancedMetadata = {
+      // Intent classification data
+      intent: response.intent ? {
+        type: response.intent.type,
+        confidence: response.intent.confidence,
+        requiresCodeGen: response.intent.requiresCodeGen,
+        requiresFileModification: response.intent.requiresFileModification,
+        contextNeeded: response.intent.contextNeeded,
+        targetFiles: response.intent.targetFiles || []
+      } : undefined,
 
-    // Generated code data
-    generatedCode: response.metadata?.generatedCode ? {
-      content: response.metadata.generatedCode,
-      language: response.metadata.language || 'typescript',
-      filename: response.metadata.filename || `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
-      type: response.type === 'new_file' ? 'new_file' as const : 
-            response.type === 'file_modification' ? 'file_modification' as const :
-            'code_snippet' as const
-    } : undefined,
+      // Generated code data
+      generatedCode: response.metadata?.generatedCode ? {
+        content: response.metadata.generatedCode,
+        language: response.metadata.language || 'typescript',
+        filename: response.metadata.filename || `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
+        type: response.type === 'new_file' ? 'new_file' as const : 
+              response.type === 'file_modification' ? 'file_modification' as const :
+              'code_snippet' as const
+      } : undefined,
 
-    // Code improvements data
-    improvements: response.intent?.type === 'code_improvement' && response.metadata?.generatedCode ? {
-      improvedCode: response.metadata.generatedCode,
-      improvementType: 'optimization' as const, // Could be detected from query
-      diff: response.metadata.diff,
-      suggestions: response.metadata.suggestions?.map(s => ({
-        type: s.type,
-        description: s.description,
-        code: s.code
-      }))
-    } : undefined,
+      // Code improvements data
+      improvements: response.intent?.type === 'code_improvement' && response.metadata?.generatedCode ? {
+        improvedCode: response.metadata.generatedCode,
+        improvementType: 'optimization' as const,
+        diff: response.metadata.diff,
+        suggestions: response.metadata.suggestions?.map(s => ({
+          type: s.type,
+          description: s.description,
+          code: s.code
+        }))
+      } : undefined,
 
-    // Code review data
-    review: response.intent?.type === 'code_review' ? {
-      reviewType: 'comprehensive' as const, // Could be extracted from query
-      issues: response.metadata?.issues?.map(issue => ({
-        type: issue.type,
-        severity: issue.severity,
-        file: issue.file,
-        line: issue.line,
-        description: issue.description,
-        suggestion: issue.suggestion
-      })),
-      score: response.metadata?.score,
-      summary: response.content
-    } : undefined,
+      // Code review data
+      review: response.intent?.type === 'code_review' ? {
+        reviewType: 'comprehensive' as const,
+        issues: response.metadata?.issues?.map(issue => ({
+          type: issue.type,
+          severity: issue.severity,
+          file: issue.file,
+          line: issue.line,
+          description: issue.description,
+          suggestion: issue.suggestion
+        })),
+        score: response.metadata?.score,
+        summary: response.content
+      } : undefined,
 
-    // Debug analysis data
-    debug: response.intent?.type === 'debug' ? {
-      diagnosis: response.content,
-      solutions: response.metadata?.suggestions?.map(s => ({
-        type: 'fix' as const,
-        description: s.description,
-        code: s.code,
-        priority: 'medium' as const
-      })),
-      investigationSteps: response.metadata?.investigationSteps || []
-    } : undefined,
+      // Debug analysis data
+      debug: response.intent?.type === 'debug' ? {
+        diagnosis: response.content,
+        solutions: response.metadata?.suggestions?.map(s => ({
+          type: 'fix' as const,
+          description: s.description,
+          code: s.code,
+          priority: 'medium' as const
+        })),
+        investigationSteps: response.metadata?.investigationSteps || []
+      } : undefined,
 
-    // Code explanation data
-    explanation: response.intent?.type === 'explain' ? {
-      detailLevel: 'detailed' as const,
-      keyPoints: response.metadata?.keyPoints || [],
-      codeFlow: response.metadata?.codeFlow || [],
-      patterns: response.metadata?.patterns || [],
-      dependencies: response.metadata?.dependencies || []
-    } : undefined,
+      // Code explanation data
+      explanation: response.intent?.type === 'explain' ? {
+        detailLevel: 'detailed' as const,
+        keyPoints: response.metadata?.keyPoints || [],
+        codeFlow: response.metadata?.codeFlow || [],
+        patterns: response.metadata?.patterns || [],
+        dependencies: response.metadata?.dependencies || []
+      } : undefined,
 
-    // Refactoring data
-    refactor: response.intent?.type === 'refactor' ? {
-      refactoredCode: response.metadata?.generatedCode,
-      changes: response.metadata?.files?.map(f => ({
-        file: f.path,
-        changeType: f.changeType,
-        description: `${f.changeType} ${f.path}`
-      })) || [],
-      preserveAPI: true, // Default assumption
-      apiChanges: response.metadata?.warnings?.filter(w => w.includes('API')) || []
-    } : undefined,
+      // Refactoring data
+      refactor: response.intent?.type === 'refactor' ? {
+        refactoredCode: response.metadata?.generatedCode,
+        changes: response.metadata?.files?.map(f => ({
+          file: f.path,
+          changeType: f.changeType,
+          description: `${f.changeType} ${f.path}`
+        })) || [],
+        preserveAPI: true,
+        apiChanges: response.metadata?.warnings?.filter(w => w.includes('API')) || []
+      } : undefined,
 
-    // Performance metrics
-    performance: {
-      processingTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
-      responseTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
-      complexity: response.metadata?.complexity
-    },
+      // Performance metrics
+      performance: {
+        processingTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
+        responseTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
+        complexity: response.metadata?.complexity
+      },
 
-    // Context files
-    contextFiles: selectedFiles.length > 0 ? selectedFiles : response.metadata?.files || [],
+      // Context files
+      contextFiles: selectedFiles.length > 0 ? selectedFiles : response.metadata?.files || [],
 
-    // Session info
-    sessionId: Date.now().toString(), // Simple session tracking
-    timestamp: new Date()
-  };
+      // Session info
+      sessionId: Date.now().toString(),
+      timestamp: new Date()
+    };
 
-  console.log('Saving enhanced response with metadata:', enhancedMetadata);
+    console.log('Saving enhanced response with metadata:', enhancedMetadata);
 
-  saveAnswer.mutate({
-    projectId: project.id,
-    question,
-    answer: response.content,
-    filesReferences: response.filesReferences || [],
-    metadata: enhancedMetadata
-  }, {
-    onSuccess: (result) => {
-      toast.success('Response saved successfully');
-      
-      // Show analytics info if available
-      if (result.analytics) {
-        const analyticsMsg = [
-          result.analytics.aiInteractionCreated && 'AI interaction tracked',
-          result.analytics.codeGenerationCreated && 'Code generation recorded',
-          result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
-          result.analytics.suggestionFeedbackCreated && 'Feedback recorded'
-        ].filter(Boolean).join(', ');
+    saveAnswer.mutate({
+      projectId: project.id,
+      question,
+      answer: response.content,
+      filesReferences: response.filesReferences || [],
+      metadata: enhancedMetadata
+    }, {
+      onSuccess: (result) => {
+        toast.success('Response saved successfully');
         
-        if (analyticsMsg) {
-          toast.success(`Analytics: ${analyticsMsg}`, { duration: 3000 });
+        // Show analytics info if available
+        if (result.analytics) {
+          const analyticsMsg = [
+            result.analytics.aiInteractionCreated && 'AI interaction tracked',
+            result.analytics.codeGenerationCreated && 'Code generation recorded',
+            result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
+            result.analytics.suggestionFeedbackCreated && 'Feedback recorded'
+          ].filter(Boolean).join(', ');
+          
+          if (analyticsMsg) {
+            toast.success(`Analytics: ${analyticsMsg}`, { duration: 3000 });
+          }
         }
+        
+        refetch();
+      },
+      onError: (error) => {
+        console.error('Failed to save response:', error);
+        toast.error('Failed to save response: ' + error.message);
       }
-      
-      refetch();
-    },
-    onError: (error) => {
-      console.error('Failed to save response:', error);
-      toast.error('Failed to save response: ' + error.message);
-    }
-  });
-};
-
+    });
+  };
 
   const SmartSuggestions = () => (
     <div className="flex flex-wrap gap-2 mb-4">
@@ -603,7 +645,7 @@ const EnhancedAskQuestionCardContent = () => {
                   <TabsContent value="response" className="h-full">
                     <div className="space-y-4">
                       <MDEditor.Markdown 
-                        source={response.content} 
+                        source={response.content || 'No response content available'} 
                         className='w-full overflow-auto custom-markdown' 
                         style={{ 
                           backgroundColor: 'rgba(255, 255, 255, 0.05)', 
