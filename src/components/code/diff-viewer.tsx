@@ -4,8 +4,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GitBranch, Copy, Download, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GitBranch, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
