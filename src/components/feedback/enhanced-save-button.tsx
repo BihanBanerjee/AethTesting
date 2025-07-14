@@ -265,9 +265,9 @@ export const EnhancedSaveButton: React.FC<EnhancedSaveButtonProps> = ({
         {!showFeedback && (
           <Button 
             disabled={saveAnswer.isPending} 
-            variant="ghost" 
+            variant="outline" 
             size="sm"
-            className="text-white/60 hover:text-white"
+            className="border-white/20 bg-white/10 text-white hover:bg-white/20"
             onClick={handleQuickSave}
             title="Save without feedback"
           >

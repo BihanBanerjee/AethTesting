@@ -1,50 +1,54 @@
-// src/app/(protected)/dashboard/ask-question-card.tsx - FIXED VERSION
+// src/app/(protected)/dashboard/ask-question-card.tsx - FIXED SCROLLING VERSION
 'use client'
-import MDEditor from '@uiw/react-md-editor'
+
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogHeader, DialogTitle, DialogContent } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import useProject from '@/hooks/use-project'
-import Image from 'next/image';
-import React, { useState, useEffect } from 'react'
-import CodeReferences from './code-references';
-import { api } from '@/trpc/react';
-import { toast } from 'sonner';
-import useRefetch from '@/hooks/use-refetch';
 import { 
-  Bot, 
-  Save, 
   Code, 
-  Zap, 
-  Search, 
-  Bug, 
-  Wrench, 
-  Lightbulb,
+  Send, 
+  FileText, 
+  GitBranch, 
+  Lightbulb, 
+  Zap,
   Copy,
   Download,
-  FileText,
+  Play,
+  RefreshCw,
+  MessageSquare,
   Settings,
+  Bug,
+  Search,
   Sparkles,
+  Wrench,
   Loader2,
   CheckCircle,
   AlertCircle,
   Clock
 } from 'lucide-react';
-import { GlassmorphicCard, GlassmorphicCardHeader, GlassmorphicCardTitle, GlassmorphicCardContent } from '@/components/ui/glassmorphic-card';
-import { motion, AnimatePresence } from 'framer-motion';
+import useProject from '@/hooks/use-project';
+import { api } from '@/trpc/react';
+import { toast } from 'sonner';
+import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 
 // Import the isolated components
+import { CodeGenerationPanel } from '@/components/code/code-generation-panel';
+import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { IntentClassifierProvider, useIntentClassifier } from '@/components/code-assistant/intent-classifier-wrapper';
 import { IntentProgressTracker } from '@/components/code-assistant/intent-progress-tracker';
 import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
-import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { CodeBlock } from '@/components/code/enhanced-code-block';
 import { DiffViewer } from '@/components/code/diff-viewer';
+import { Dialog, DialogHeader, DialogTitle, DialogContent } from '@/components/ui/dialog';
+import MDEditor from '@uiw/react-md-editor';
+import CodeReferences from './code-references';
 import { EnhancedSaveButton } from '@/components/feedback/enhanced-save-button';
+import useRefetch from '@/hooks/use-refetch';
+import Image from 'next/image';
 
-// Enhanced response structure
 interface EnhancedResponse {
   type: 'answer' | 'code' | 'review' | 'debug' | 'explanation';
   content: string;
@@ -76,6 +80,7 @@ interface EnhancedResponse {
     dependencies?: string[];
   };
   filesReferences?: {fileName: string; sourceCode: string; summary: string}[];
+  timestamp?: Date;
 }
 
 const EnhancedAskQuestionCardContent = () => {
@@ -144,7 +149,7 @@ const EnhancedAskQuestionCardContent = () => {
       case 'debug': return <Bug className="h-4 w-4" />;
       case 'refactor': return <Wrench className="h-4 w-4" />;
       case 'explain': return <Lightbulb className="h-4 w-4" />;
-      default: return <Bot className="h-4 w-4" />;
+      default: return <MessageSquare className="h-4 w-4" />;
     }
   };
 
@@ -170,6 +175,8 @@ const EnhancedAskQuestionCardContent = () => {
     if (result.response) return String(result.response);
     return JSON.stringify(result, null, 2);
   };
+
+  // Enhanced save logic in ask-question-card.tsx
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -205,6 +212,37 @@ const EnhancedAskQuestionCardContent = () => {
             }
           });
 
+          // FIXED: Create proper filesReferences for generated code
+          const generatedFilesReferences = [];
+          
+          // Add original referenced files if any
+          if (selectedFiles.length > 0) {
+            const contextFiles = await Promise.all(
+              selectedFiles.map(async (fileName) => {
+                // You might need to fetch the actual file content here
+                // For now, we'll use a placeholder
+                return {
+                  fileName,
+                  sourceCode: "// Referenced context file",
+                  summary: `Context file: ${fileName}`
+                };
+              })
+            );
+            generatedFilesReferences.push(...contextFiles);
+          }
+
+          // Add the generated code as a file reference
+          if (result.generatedCode) {
+            const generatedFileName = result.files?.[0]?.path || 
+              `generated-${intent.type}-${Date.now()}.${result.language === 'typescript' ? 'ts' : 'js'}`;
+            
+            generatedFilesReferences.push({
+              fileName: generatedFileName,
+              sourceCode: result.generatedCode,
+              summary: `Generated ${intent.type} code: ${result.explanation?.substring(0, 100) || 'AI generated code'}`
+            });
+          }
+
           setResponse({
             type: 'code',
             content: extractSimpleContent(result),
@@ -214,14 +252,10 @@ const EnhancedAskQuestionCardContent = () => {
               language: result.language,
               warnings: result.warnings,
               dependencies: result.dependencies,
-              files: result.files?.map((f: any) => f.path) || []
+              files: result.files?.map((f: any) => f.path) || [],
+              generationType: 'new_file' // Mark this as generated content
             },
-            // ADD THIS: Create filesReferences for generated code to display in Code tab
-            filesReferences: result.generatedCode ? [{
-              fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.language === 'typescript' ? 'ts' : 'js'}`,
-              sourceCode: result.generatedCode,
-              summary: `Generated ${intent.type} code`
-            }] : []
+            filesReferences: generatedFilesReferences
           });
           break;
 
@@ -233,20 +267,46 @@ const EnhancedAskQuestionCardContent = () => {
             improvementType: 'optimization'
           });
 
+          // FIXED: Create proper filesReferences for improved code
+          const improvedFilesReferences = [];
+          
+          // Add original files for comparison
+          if (selectedFiles.length > 0) {
+            const originalFiles = await Promise.all(
+              selectedFiles.map(async (fileName) => {
+                return {
+                  fileName: `original-${fileName}`,
+                  sourceCode: "// Original code before improvement",
+                  summary: `Original version of ${fileName}`
+                };
+              })
+            );
+            improvedFilesReferences.push(...originalFiles);
+          }
+
+          // Add the improved code
+          if (result.improvedCode) {
+            const improvedFileName = `improved-${intent.targetFiles?.[0] || 'code'}-${Date.now()}.${result.language || 'ts'}`;
+            
+            improvedFilesReferences.push({
+              fileName: improvedFileName,
+              sourceCode: result.improvedCode,
+              summary: `Improved code: ${result.explanation?.substring(0, 100) || 'AI improved code'}`
+            });
+          }
+
           setResponse({
             type: 'code',
             content: extractSimpleContent(result),
             intent,
             metadata: {
               generatedCode: result.improvedCode,
+              originalCode: result.originalCode,
               diff: result.diff,
-              suggestions: result.suggestions
+              suggestions: result.suggestions,
+              improvementType: 'code_improvement'
             },
-            filesReferences: result.improvedCode ? [{
-              fileName: `improved-${intent.targetFiles?.[0] || 'code'}.${result.language || 'ts'}`,
-              sourceCode: result.improvedCode,
-              summary: `Improved code with ${intent.type}`
-            }] : []
+            filesReferences: improvedFilesReferences
           });
           break;
 
@@ -258,6 +318,29 @@ const EnhancedAskQuestionCardContent = () => {
             focusAreas: question
           });
 
+          // FIXED: Include reviewed files in references
+          const reviewedFilesReferences = [];
+          
+          if (result.filesReviewed && result.filesReviewed.length > 0) {
+            const reviewedFiles = await Promise.all(
+              result.filesReviewed.map(async (fileName: string) => {
+                return {
+                  fileName: `reviewed-${fileName}`,
+                  sourceCode: "// Code that was reviewed",
+                  summary: `Reviewed file: ${fileName}`
+                };
+              })
+            );
+            reviewedFilesReferences.push(...reviewedFiles);
+          }
+
+          // Add review summary as a "file"
+          reviewedFilesReferences.push({
+            fileName: `review-summary-${Date.now()}.md`,
+            sourceCode: `# Code Review Summary\n\n${result.summary}\n\n## Issues Found\n${result.issues?.map((issue: any) => `- ${issue.description}`).join('\n') || 'No issues found'}`,
+            summary: 'Code review summary and findings'
+          });
+
           setResponse({
             type: 'review',
             content: extractSimpleContent(result),
@@ -265,8 +348,10 @@ const EnhancedAskQuestionCardContent = () => {
             metadata: {
               issues: result.issues,
               suggestions: result.suggestions,
-              files: result.filesReviewed
-            }
+              files: result.filesReviewed,
+              reviewType: 'code_review'
+            },
+            filesReferences: reviewedFilesReferences
           });
           break;
 
@@ -278,17 +363,58 @@ const EnhancedAskQuestionCardContent = () => {
             contextLevel: intent.contextNeeded
           });
 
+          // FIXED: Include debug analysis and solutions as files
+          const debugFilesReferences = [];
+          
+          // Add original files being debugged
+          if (selectedFiles.length > 0) {
+            const originalFiles = await Promise.all(
+              selectedFiles.map(async (fileName) => {
+                return {
+                  fileName: `debug-target-${fileName}`,
+                  sourceCode: "// File being debugged",
+                  summary: `Debug target: ${fileName}`
+                };
+              })
+            );
+            debugFilesReferences.push(...originalFiles);
+          }
+
+          // Add debug solutions as files
+          if (result.solutions && result.solutions.length > 0) {
+            result.solutions.forEach((solution: any, index: number) => {
+              if (solution.code) {
+                debugFilesReferences.push({
+                  fileName: `debug-solution-${index + 1}-${Date.now()}.${result.language || 'ts'}`,
+                  sourceCode: solution.code,
+                  summary: `Debug solution: ${solution.description}`
+                });
+              }
+            });
+          }
+
+          // Add debug analysis summary
+          debugFilesReferences.push({
+            fileName: `debug-analysis-${Date.now()}.md`,
+            sourceCode: `# Debug Analysis\n\n## Diagnosis\n${result.diagnosis}\n\n## Solutions\n${result.solutions?.map((s: any) => `- ${s.description}`).join('\n') || 'No solutions provided'}`,
+            summary: 'Debug analysis and solutions'
+          });
+
           setResponse({
             type: 'debug',
             content: extractSimpleContent(result),
             intent,
             metadata: {
+              diagnosis: result.diagnosis,
+              solutions: result.solutions,
               suggestions: result.solutions?.map((s: any) => ({
                 type: 'bug_fix',
                 description: s.description,
                 code: s.code
-              })) || []
-            }
+              })) || [],
+              debugType: 'debug_analysis'
+            },
+            filesReferences: debugFilesReferences
           });
           break;
 
@@ -300,18 +426,48 @@ const EnhancedAskQuestionCardContent = () => {
             detailLevel: 'detailed'
           });
 
+          // FIXED: Include explained files and explanation
+          const explainFilesReferences = [];
+          
+          // Add files being explained
+          if (result.filesAnalyzed && result.filesAnalyzed.length > 0) {
+            const analyzedFiles = await Promise.all(
+              result.filesAnalyzed.map(async (fileName: string) => {
+                return {
+                  fileName: `explained-${fileName}`,
+                  sourceCode: "// Code being explained",
+                  summary: `File being explained: ${fileName}`
+                };
+              })
+            );
+            explainFilesReferences.push(...analyzedFiles);
+          }
+
+          // Add explanation as a markdown file
+          explainFilesReferences.push({
+            fileName: `explanation-${Date.now()}.md`,
+            sourceCode: `# Code Explanation\n\n${result.explanation}\n\n## Key Points\n${result.keyPoints?.map((point: string) => `- ${point}`).join('\n') || 'No key points'}`,
+            summary: 'Code explanation and analysis'
+          });
+
           setResponse({
             type: 'explanation',
             content: extractSimpleContent(result),
             intent,
             metadata: {
-              files: result.filesAnalyzed
-            }
+              explanation: result.explanation,
+              keyPoints: result.keyPoints,
+              codeFlow: result.codeFlow,
+              patterns: result.patterns,
+              dependencies: result.dependencies,
+              files: result.filesAnalyzed,
+              explanationType: 'code_explanation'
+            },
+            filesReferences: explainFilesReferences
           });
           break;
 
         default:
-          // Fallback to general Q&A - FIXED VERSION
           console.log('🔄 Using fallback askQuestion');
           const qaResult = await askQuestion.mutateAsync({
             projectId: project.id,
@@ -321,12 +477,9 @@ const EnhancedAskQuestionCardContent = () => {
 
           console.log('📝 QA Result:', qaResult);
 
-          // The key issue: qaResult.output is a streamable value that needs to be consumed
           let content = '';
           if (qaResult.output && typeof qaResult.output === 'object') {
-            // If it's a streamable value, we need to read it properly
             try {
-              // Try to read the streamable value chunks
               const chunks = [];
               for await (const chunk of qaResult.output) {
                 chunks.push(chunk);
@@ -334,7 +487,6 @@ const EnhancedAskQuestionCardContent = () => {
               content = chunks.join('');
             } catch (error) {
               console.error('Error reading stream:', error);
-              // Fallback: try to get the value directly
               content = qaResult.output.value || qaResult.output.toString();
             }
           } else if (qaResult.output) {
@@ -395,141 +547,6 @@ const EnhancedAskQuestionCardContent = () => {
     toast.success('Code downloaded');
   };
 
-  const saveCurrentResponse = () => {
-    if (!response || !project) return;
-
-    // Gather enhanced metadata
-    const enhancedMetadata = {
-      // Intent classification data
-      intent: response.intent ? {
-        type: response.intent.type,
-        confidence: response.intent.confidence,
-        requiresCodeGen: response.intent.requiresCodeGen,
-        requiresFileModification: response.intent.requiresFileModification,
-        contextNeeded: response.intent.contextNeeded,
-        targetFiles: response.intent.targetFiles || []
-      } : undefined,
-
-      // Generated code data
-      generatedCode: response.metadata?.generatedCode ? {
-        content: response.metadata.generatedCode,
-        language: response.metadata.language || 'typescript',
-        filename: response.metadata.filename || `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
-        type: response.type === 'new_file' ? 'new_file' as const : 
-              response.type === 'file_modification' ? 'file_modification' as const :
-              'code_snippet' as const
-      } : undefined,
-
-      // Code improvements data
-      improvements: response.intent?.type === 'code_improvement' && response.metadata?.generatedCode ? {
-        improvedCode: response.metadata.generatedCode,
-        improvementType: 'optimization' as const,
-        diff: response.metadata.diff,
-        suggestions: response.metadata.suggestions?.map(s => ({
-          type: s.type,
-          description: s.description,
-          code: s.code
-        }))
-      } : undefined,
-
-      // Code review data
-      review: response.intent?.type === 'code_review' ? {
-        reviewType: 'comprehensive' as const,
-        issues: response.metadata?.issues?.map(issue => ({
-          type: issue.type,
-          severity: issue.severity,
-          file: issue.file,
-          line: issue.line,
-          description: issue.description,
-          suggestion: issue.suggestion
-        })),
-        score: response.metadata?.score,
-        summary: response.content
-      } : undefined,
-
-      // Debug analysis data
-      debug: response.intent?.type === 'debug' ? {
-        diagnosis: response.content,
-        solutions: response.metadata?.suggestions?.map(s => ({
-          type: 'fix' as const,
-          description: s.description,
-          code: s.code,
-          priority: 'medium' as const
-        })),
-        investigationSteps: response.metadata?.investigationSteps || []
-      } : undefined,
-
-      // Code explanation data
-      explanation: response.intent?.type === 'explain' ? {
-        detailLevel: 'detailed' as const,
-        keyPoints: response.metadata?.keyPoints || [],
-        codeFlow: response.metadata?.codeFlow || [],
-        patterns: response.metadata?.patterns || [],
-        dependencies: response.metadata?.dependencies || []
-      } : undefined,
-
-      // Refactoring data
-      refactor: response.intent?.type === 'refactor' ? {
-        refactoredCode: response.metadata?.generatedCode,
-        changes: response.metadata?.files?.map(f => ({
-          file: f.path,
-          changeType: f.changeType,
-          description: `${f.changeType} ${f.path}`
-        })) || [],
-        preserveAPI: true,
-        apiChanges: response.metadata?.warnings?.filter(w => w.includes('API')) || []
-      } : undefined,
-
-      // Performance metrics
-      performance: {
-        processingTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
-        responseTime: Date.now() - (response.timestamp?.getTime() || Date.now()),
-        complexity: response.metadata?.complexity
-      },
-
-      // Context files
-      contextFiles: selectedFiles.length > 0 ? selectedFiles : response.metadata?.files || [],
-
-      // Session info
-      sessionId: Date.now().toString(),
-      timestamp: new Date()
-    };
-
-    console.log('Saving enhanced response with metadata:', enhancedMetadata);
-
-    saveAnswer.mutate({
-      projectId: project.id,
-      question,
-      answer: response.content,
-      filesReferences: response.filesReferences || [],
-      metadata: enhancedMetadata
-    }, {
-      onSuccess: (result) => {
-        toast.success('Response saved successfully');
-        
-        // Show analytics info if available
-        if (result.analytics) {
-          const analyticsMsg = [
-            result.analytics.aiInteractionCreated && 'AI interaction tracked',
-            result.analytics.codeGenerationCreated && 'Code generation recorded',
-            result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
-            result.analytics.suggestionFeedbackCreated && 'Feedback recorded'
-          ].filter(Boolean).join(', ');
-          
-          if (analyticsMsg) {
-            toast.success(`Analytics: ${analyticsMsg}`, { duration: 3000 });
-          }
-        }
-        
-        refetch();
-      },
-      onError: (error) => {
-        console.error('Failed to save response:', error);
-        toast.error('Failed to save response: ' + error.message);
-      }
-    });
-  };
-
   const SmartSuggestions = () => (
     <div className="flex flex-wrap gap-2 mb-4">
       <Button
@@ -580,8 +597,8 @@ const EnhancedAskQuestionCardContent = () => {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className='sm:max-w-[90vw] max-h-[90vh] overflow-hidden flex flex-col glassmorphism border border-white/20'>
-          <DialogHeader className="pr-10">
+        <DialogContent className='sm:max-w-[90vw] max-h-[90vh] glassmorphism border border-white/20 flex flex-col'>
+          <DialogHeader className="pr-10 flex-shrink-0">
             <div className="flex items-center gap-2">
               <DialogTitle className="flex items-center">
                 <Image src="/aetheria-logo.svg" alt="aetheria" width={40} height={40} className="filter drop-shadow-lg" />
@@ -610,30 +627,33 @@ const EnhancedAskQuestionCardContent = () => {
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden">
+          {/* FIXED: Main content area with proper flex layout */}
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {loading && (
-              <IntentProgressTracker
-                intent={intentPreview?.type || 'question'}
-                confidence={intentPreview?.confidence || 0.8}
-                stage={processingStage}
-                progress={
-                  processingStage === 'analyzing' ? 25 :
-                  processingStage === 'processing' ? 50 :
-                  processingStage === 'generating' ? 75 :
-                  100
-                }
-                currentStep={
-                  processingStage === 'analyzing' ? 'Analyzing your request...' :
-                  processingStage === 'processing' ? 'Processing with AI...' :
-                  processingStage === 'generating' ? 'Generating response...' :
-                  'Complete'
-                }
-              />
+              <div className="flex-shrink-0 p-4">
+                <IntentProgressTracker
+                  intent={intentPreview?.type || 'question'}
+                  confidence={intentPreview?.confidence || 0.8}
+                  stage={processingStage}
+                  progress={
+                    processingStage === 'analyzing' ? 25 :
+                    processingStage === 'processing' ? 50 :
+                    processingStage === 'generating' ? 75 :
+                    100
+                  }
+                  currentStep={
+                    processingStage === 'analyzing' ? 'Analyzing your request...' :
+                    processingStage === 'processing' ? 'Processing with AI...' :
+                    processingStage === 'generating' ? 'Generating response...' :
+                    'Complete'
+                  }
+                />
+              </div>
             )}
             
             {response && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                <TabsList className="grid w-full grid-cols-3 bg-white/10 flex-shrink-0">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+                <TabsList className="grid w-full grid-cols-3 bg-white/10 flex-shrink-0 mx-4">
                   <TabsTrigger value="response" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Response
@@ -652,19 +672,22 @@ const EnhancedAskQuestionCardContent = () => {
                   )}
                 </TabsList>
 
-                <div className="flex-1 overflow-auto mt-4">
-                  <TabsContent value="response" className="h-full">
-                    <div className="space-y-4">
-                      <MDEditor.Markdown 
-                        source={response.content || 'No response content available'} 
-                        className='w-full overflow-auto custom-markdown' 
-                        style={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-                          color: 'white',
-                          borderRadius: '0.5rem',
-                          padding: '1rem',
-                        }}
-                      />
+                {/* FIXED: Content area with proper scrolling */}
+                <div className="flex-1 overflow-hidden px-4 pb-4">
+                  <TabsContent value="response" className="h-full mt-4 overflow-hidden">
+                    <div className="h-full overflow-y-auto space-y-4 pr-2">
+                      <div className="max-h-none">
+                        <MDEditor.Markdown 
+                          source={response.content || 'No response content available'} 
+                          className='w-full custom-markdown' 
+                          style={{ 
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+                            color: 'white',
+                            borderRadius: '0.5rem',
+                            padding: '1rem',
+                          }}
+                        />
+                      </div>
 
                       {/* Enhanced metadata display */}
                       {response.metadata?.suggestions && response.metadata.suggestions.length > 0 && (
@@ -732,55 +755,63 @@ const EnhancedAskQuestionCardContent = () => {
                   </TabsContent>
 
                   {response.metadata?.generatedCode && (
-                    <TabsContent value="code" className="h-full">
-                      <div className="glassmorphism border border-white/20 p-4 rounded-lg">
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="font-medium text-white flex items-center">
-                            <Code className="h-4 w-4 mr-1" />
-                            Generated Code
-                            {response.metadata.language && (
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {response.metadata.language}
-                              </Badge>
-                            )}
-                          </h4>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => copyToClipboard(response.metadata!.generatedCode!, 'Code')}
-                              className="border-white/20 bg-white/10 text-white"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadCode(
-                                response.metadata!.generatedCode!, 
-                                `generated-${response.intent.type}.${response.metadata!.language === 'typescript' ? 'ts' : 'js'}`
+                    <TabsContent value="code" className="h-full mt-4 overflow-hidden">
+                      <div className="h-full overflow-y-auto pr-2">
+                        <div className="glassmorphism border border-white/20 p-4 rounded-lg">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-medium text-white flex items-center">
+                              <Code className="h-4 w-4 mr-1" />
+                              Generated Code
+                              {response.metadata.language && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  {response.metadata.language}
+                                </Badge>
                               )}
-                              className="border-white/20 bg-white/10 text-white"
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
+                            </h4>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => copyToClipboard(response.metadata!.generatedCode!, 'Code')}
+                                className="border-white/20 bg-white/10 text-white"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadCode(
+                                  response.metadata!.generatedCode!, 
+                                  `generated-${response.intent.type}.${response.metadata!.language === 'typescript' ? 'ts' : 'js'}`
+                                )}
+                                className="border-white/20 bg-white/10 text-white"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="overflow-y-auto max-h-[500px]">
+                            <CodeBlock
+                              code={response.metadata.generatedCode}
+                              language={response.metadata.language || 'typescript'}
+                              actions={{
+                                copy: true,
+                                download: true
+                              }}
+                            />
                           </div>
                         </div>
-                        <CodeBlock
-                          code={response.metadata.generatedCode}
-                          language={response.metadata.language || 'typescript'}
-                          actions={{
-                            copy: true,
-                            download: true
-                          }}
-                        />
                       </div>
                     </TabsContent>
                   )}
 
                   {response.filesReferences && response.filesReferences.length > 0 && (
-                    <TabsContent value="files" className="h-full">
-                      <CodeReferences filesReferences={response.filesReferences} />
+                    <TabsContent value="files" className="h-full mt-4 overflow-hidden">
+                      <div className="h-full overflow-y-auto pr-2">
+                        <div className='h-[60vh]'>
+                          <CodeReferences filesReferences={response.filesReferences} className='h-full' />
+                        </div>
+                      </div>
                     </TabsContent>
                   )}
                 </div>
@@ -788,7 +819,7 @@ const EnhancedAskQuestionCardContent = () => {
             )}
           </div>
           
-          <div className="mt-4 flex-shrink-0">
+          <div className="flex-shrink-0 p-4 border-t border-white/10">
             <Button 
               type="button" 
               onClick={() => setOpen(false)} 
@@ -801,10 +832,10 @@ const EnhancedAskQuestionCardContent = () => {
       </Dialog>
 
       <GlassmorphicCard className='relative col-span-3'>
-        <GlassmorphicCardHeader>
-          <GlassmorphicCardTitle className="flex items-center justify-between">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
             <span className="flex items-center">
-              <Bot className="h-5 w-5 mr-2" />
+              <MessageSquare className="h-5 w-5 mr-2" />
               AI Assistant
             </span>
             {intentPreview && (
@@ -814,9 +845,8 @@ const EnhancedAskQuestionCardContent = () => {
                 <span className="ml-1">({Math.round(intentPreview.confidence * 100)}%)</span>
               </Badge>
             )}
-          </GlassmorphicCardTitle>
-        </GlassmorphicCardHeader>
-        <GlassmorphicCardContent>
+          </div>
+          
           {!response && <SmartSuggestions />}
           
           {/* Smart Input Suggestions */}
@@ -873,7 +903,7 @@ const EnhancedAskQuestionCardContent = () => {
               )}
             </Button>
           </div>
-        </GlassmorphicCardContent>
+        </div>
       </GlassmorphicCard>
     </>
   );
