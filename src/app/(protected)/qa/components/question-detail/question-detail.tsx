@@ -31,7 +31,7 @@ interface Question {
   answer: string;
   createdAt: string | Date;
   user: User;
-  intent?: string;
+  intent?: string | null;
   metadata?: any;
   filesReferences?: {
     fileName: string;
