@@ -5,6 +5,7 @@ import { TrendingUp, BarChart3, Code, Star, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Statistics } from '../../types/statistics';
+import { getCodeGenerationRate, getSatisfactionAverage, getPerformanceAverage } from '../../types/statistics';
 
 interface AnalyticsDashboardProps {
   statistics: Statistics | null | undefined;
@@ -75,10 +76,10 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              {Math.round((statistics?.codeGeneration.applicationRate || 0) * 100)}%
+              {Math.round(getCodeGenerationRate(statistics || {} as Statistics) * 100)}%
             </div>
             <p className="text-xs text-white/60">
-              {statistics?.codeGeneration.totalApplied || 0} of {statistics?.codeGeneration.totalGenerated || 0} applied
+              {statistics?.codeGeneration?.totalApplied || 0} of {statistics?.codeGeneration?.totalGenerated || 0} applied
             </p>
           </CardContent>
         </Card>
@@ -109,7 +110,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">
-              {Math.round((statistics?.confidence.average || 0) * 100)}%
+              {Math.round((statistics?.confidence?.average || 0) * 100)}%
             </div>
             <p className="text-xs text-white/60">
               Intent classification
@@ -164,7 +165,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
                 <span className="text-sm text-green-200">Code Applied Successfully</span>
                 <span className="text-lg font-bold text-green-200">
-                  {Math.round((statistics?.codeGeneration.applicationRate || 0) * 100)}%
+                  {Math.round(getCodeGenerationRate(statistics || {} as Statistics) * 100)}%
                 </span>
               </div>
               
@@ -172,14 +173,14 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <span className="text-sm text-blue-200">Average Satisfaction</span>
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-bold text-blue-200">
-                    {statistics?.satisfaction.average?.toFixed(1) || 'N/A'}/5
+                    {getSatisfactionAverage(statistics || {} as Statistics).toFixed(1) || 'N/A'}/5
                   </span>
                   <div className="flex">
                     {[1, 2, 3, 4, 5].map(star => (
                       <Star
                         key={star}
                         className={`h-4 w-4 ${
-                          star <= (statistics?.satisfaction.average || 0)
+                          star <= getSatisfactionAverage(statistics || {} as Statistics)
                             ? 'text-yellow-400 fill-current'
                             : 'text-white/30'
                         }`}
@@ -192,8 +193,8 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               <div className="flex justify-between items-center p-3 bg-purple-500/10 rounded-lg border border-purple-500/20">
                 <span className="text-sm text-purple-200">Avg Response Time</span>
                 <span className="text-lg font-bold text-purple-200">
-                  {statistics?.performance.avgProcessingTime ? 
-                    `${(statistics.performance.avgProcessingTime / 1000).toFixed(1)}s` : 
+                  {getPerformanceAverage(statistics || {} as Statistics) ? 
+                    `${(getPerformanceAverage(statistics || {} as Statistics) / 1000).toFixed(1)}s` : 
                     'N/A'}
                 </span>
               </div>

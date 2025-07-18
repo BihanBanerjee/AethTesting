@@ -7,6 +7,7 @@ import MDEditor from '@uiw/react-md-editor';
 import CodeReferenceWrapper from '../code-reference/code-reference-wrapper';
 import { cleanSourceCode } from '../../../../../utils/code/language-utils';
 import type { Question } from '../../types/question';
+import { getFileReferencesFromQuestion } from '../../types/question';
 
 interface AnswerTabContentProps {
   question: Question;
@@ -58,7 +59,7 @@ export const CodeTabContent: React.FC<CodeTabContentProps> = ({ question, codeWr
       <div className="h-[calc(100%-3rem)] glassmorphism border border-indigo-500/20 rounded-xl p-4 bg-indigo-950/30 shadow-inner">
         <CodeReferenceWrapper 
           ref={codeWrapperRef}
-          filesReferences={question.filesReferences || []} 
+          filesReferences={getFileReferencesFromQuestion(question)} 
         />
       </div>
     </div>
@@ -85,15 +86,18 @@ export const getClipboardContent = (
 ): { content: string; filename?: string } => {
   if (activeTab === 'answer') {
     return { content: question.answer };
-  } else if (activeTab === 'code' && question.filesReferences && question.filesReferences.length > 0) {
-    const activeFileIndex = codeWrapperRef.activeFileIndex;
-    const activeFile = question.filesReferences[activeFileIndex];
+  } else if (activeTab === 'code') {
+    const fileRefs = getFileReferencesFromQuestion(question);
+    if (fileRefs.length > 0) {
+      const activeFileIndex = codeWrapperRef.activeFileIndex;
+      const activeFile = fileRefs[activeFileIndex];
     
-    if (activeFile) {
-      return { 
-        content: cleanSourceCode(activeFile.sourceCode),
-        filename: activeFile.fileName
-      };
+      if (activeFile) {
+        return { 
+          content: cleanSourceCode(activeFile.sourceCode),
+          filename: activeFile.fileName
+        };
+      }
     }
   }
   

@@ -7,6 +7,7 @@ import { ChevronLeft, Clock, Copy, X, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnswerTabContent, CodeTabContent, getClipboardContent } from './tab-content';
 import type { Question } from '../../types/question';
+import { getUserDisplayName, getUserImageUrl } from '../../types/question';
 
 // Enhanced types
 
@@ -80,8 +81,8 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
             <div className="flex items-center">
               <div className="mr-3">
                 <img 
-                  src={question.user.imageUrl || ''}
-                  alt="User"
+                  src={getUserImageUrl(question.user)}
+                  alt={getUserDisplayName(question.user)}
                   className="h-8 w-8 rounded-full ring-2 ring-indigo-400/30"
                 />
               </div>

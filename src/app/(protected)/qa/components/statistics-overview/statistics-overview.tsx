@@ -4,6 +4,7 @@ import React from 'react';
 import { BarChart3, Star, Code, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Statistics } from '../../types/statistics';
+import { getSatisfactionAverage, getPerformanceAverage } from '../../types/statistics';
 
 interface StatisticsOverviewProps {
   statistics: Statistics | null | undefined;
@@ -38,10 +39,10 @@ const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ statistics }) =
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-white">
-            {statistics.satisfaction.average?.toFixed(1) || 'N/A'}/5
+            {getSatisfactionAverage(statistics).toFixed(1) || 'N/A'}/5
           </div>
           <p className="text-xs text-white/60">
-            {statistics.satisfaction.totalRatings} ratings
+            {statistics.satisfaction?.totalRatings || 0} ratings
           </p>
         </CardContent>
       </Card>
@@ -55,10 +56,10 @@ const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ statistics }) =
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-white">
-            {statistics.codeGeneration.totalGenerated}
+            {statistics.codeGeneration?.totalGenerated || 0}
           </div>
           <p className="text-xs text-white/60">
-            {Math.round(statistics.codeGeneration.applicationRate * 100)}% applied
+            {Math.round((statistics.codeGeneration?.applicationRate || 0) * 100)}% applied
           </p>
         </CardContent>
       </Card>
@@ -72,8 +73,8 @@ const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ statistics }) =
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-white">
-            {statistics.performance.avgProcessingTime ? 
-              `${(statistics.performance.avgProcessingTime / 1000).toFixed(1)}s` : 
+            {getPerformanceAverage(statistics) ? 
+              `${(getPerformanceAverage(statistics) / 1000).toFixed(1)}s` : 
               'N/A'}
           </div>
           <p className="text-xs text-white/60">

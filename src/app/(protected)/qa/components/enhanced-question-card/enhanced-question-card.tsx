@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Question } from '../../types/question';
+import { getFileReferencesFromQuestion, getUserDisplayName, getUserImageUrl } from '../../types/question';
 
 interface EnhancedQuestionCardProps {
   question: Question;
@@ -51,8 +52,8 @@ const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
             <div className='flex items-center flex-1'>
               <div className='flex-shrink-0 mr-3'>
                 <img 
-                  src={question.user.imageUrl || ''}
-                  alt={question.user.firstName || 'User'}
+                  src={getUserImageUrl(question.user)}
+                  alt={getUserDisplayName(question.user)}
                   className='rounded-full h-10 w-10 ring-2 ring-indigo-400/30 object-cover'
                 />
               </div>
@@ -125,12 +126,14 @@ const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
             <div className="flex items-center gap-4 text-white/50">
               <span>
                 {/* Show file references OR generated code count */}
-                {question.filesReferences && question.filesReferences.length > 0 ? 
-                  `${question.filesReferences.length} file references` :
-                  hasGeneratedCode ? 
-                    '1 generated file' :
-                    '0 file references'
-                }
+                {(() => {
+                  const fileRefs = getFileReferencesFromQuestion(question);
+                  return fileRefs.length > 0 ? 
+                    `${fileRefs.length} file references` :
+                    hasGeneratedCode ? 
+                      '1 generated file' :
+                      '0 file references';
+                })()}
               </span>
               {question.displayProperties.processingTimeFormatted && (
                 <span className="flex items-center">
