@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Code, Filter, TrendingUp, BarChart3, Clock, Star, Zap } from 'lucide-react';
+import { Code, Filter, TrendingUp, BarChart3, Clock, Star, Zap, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,13 +14,17 @@ import useProject from '@/hooks/use-project';
 import { api } from '@/trpc/react';
 
 // Import components
-import QuestionCard from './components/question-card/question-card';
 import QuestionDetail from './components/question-detail/question-detail';
 import ScrollbarStyles from './components/scrollbar-styles';
 import EnhancedAskQuestionCard from '../dashboard/ask-question-card';
 
 // Enhanced Question Card component
-const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
+const EnhancedQuestionCard = ({ question, index, onClick, onDelete }: {
+  question: any;
+  index: number;
+  onClick: () => void;
+  onDelete: (id: string) => void;
+}) => {
   let parsedMetadata = null;
   try {
     parsedMetadata = question.metadata ? 
@@ -87,10 +91,23 @@ const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className='text-xs text-white/50 whitespace-nowrap flex items-center'>
-                <Clock className="h-3 w-3 mr-1" />
-                {new Date(question.createdAt).toLocaleDateString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(question.id);
+                  }}
+                  className="border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/50 p-1 h-8 w-8"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+                <span className='text-xs text-white/50 whitespace-nowrap flex items-center'>
+                  <Clock className="h-3 w-3 mr-1" />
+                  {new Date(question.createdAt).toLocaleDateString()}
+                </span>
+              </div>
               {question.analytics.estimatedImpact && (
                 <Badge variant="outline" className="text-xs border-purple-500/30 text-purple-300">
                   Impact: {question.analytics.estimatedImpact}
@@ -145,7 +162,7 @@ const EnhancedQuestionCard = ({ question, index, onClick }: any) => {
 };
 
 // Statistics Overview Component
-const StatisticsOverview = ({ statistics }: any) => {
+const StatisticsOverview = ({ statistics }: { statistics: any }) => {
   if (!statistics) return null;
 
   return (
@@ -233,18 +250,28 @@ const EnhancedQAPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('questions');
 
   // Enhanced query with filters
-  const { data: questionsData, isLoading } = api.project.getQuestions.useQuery({
+  const { data: questionsData, isLoading, refetch } = api.project.getQuestions.useQuery({
     projectId,
-    intent: filters.intent as any,
-    timeRange: filters.timeRange as any,
-    sortBy: filters.sortBy as any,
-    sortOrder: filters.sortOrder as any
+    intent: filters.intent,
+    timeRange: filters.timeRange,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder
   });
 
   // Get statistics
   const { data: statistics } = api.project.getQuestionStatistics.useQuery({
     projectId,
-    timeRange: filters.timeRange as any
+    timeRange: filters.timeRange
+  });
+
+  // Delete question mutation
+  const deleteQuestionMutation = api.project.deleteQuestion.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+    onError: (error) => {
+      console.error('Failed to delete question:', error);
+    }
   });
 
   const questions = questionsData?.questions || [];
@@ -256,6 +283,12 @@ const EnhancedQAPage: React.FC = () => {
 
   const closeQuestion = () => {
     setSelectedQuestionIndex(null);
+  };
+
+  const handleDeleteQuestion = (questionId: string) => {
+    if (window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
+      deleteQuestionMutation.mutate({ questionId });
+    }
   };
 
   if (isLoading) {
@@ -390,6 +423,7 @@ const EnhancedQAPage: React.FC = () => {
                 question={question}
                 index={index}
                 onClick={() => openQuestion(index)}
+                onDelete={handleDeleteQuestion}
               />
             ))}
           </div>

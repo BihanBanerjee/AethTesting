@@ -176,8 +176,6 @@ const EnhancedAskQuestionCardContent = () => {
     return JSON.stringify(result, null, 2);
   };
 
-  // Enhanced save logic in ask-question-card.tsx
-
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!project?.id || !question.trim()) return;
@@ -212,37 +210,6 @@ const EnhancedAskQuestionCardContent = () => {
             }
           });
 
-          // FIXED: Create proper filesReferences for generated code
-          const generatedFilesReferences = [];
-          
-          // Add original referenced files if any
-          if (selectedFiles.length > 0) {
-            const contextFiles = await Promise.all(
-              selectedFiles.map(async (fileName) => {
-                // You might need to fetch the actual file content here
-                // For now, we'll use a placeholder
-                return {
-                  fileName,
-                  sourceCode: "// Referenced context file",
-                  summary: `Context file: ${fileName}`
-                };
-              })
-            );
-            generatedFilesReferences.push(...contextFiles);
-          }
-
-          // Add the generated code as a file reference
-          if (result.generatedCode) {
-            const generatedFileName = result.files?.[0]?.path || 
-              `generated-${intent.type}-${Date.now()}.${result.language === 'typescript' ? 'ts' : 'js'}`;
-            
-            generatedFilesReferences.push({
-              fileName: generatedFileName,
-              sourceCode: result.generatedCode,
-              summary: `Generated ${intent.type} code: ${result.explanation?.substring(0, 100) || 'AI generated code'}`
-            });
-          }
-
           setResponse({
             type: 'code',
             content: extractSimpleContent(result),
@@ -252,10 +219,13 @@ const EnhancedAskQuestionCardContent = () => {
               language: result.language,
               warnings: result.warnings,
               dependencies: result.dependencies,
-              files: result.files?.map((f: any) => f.path) || [],
-              generationType: 'new_file' // Mark this as generated content
+              files: result.files?.map((f: any) => f.path) || []
             },
-            filesReferences: generatedFilesReferences
+            filesReferences: result.generatedCode ? [{
+              fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.language === 'typescript' ? 'ts' : 'js'}`,
+              sourceCode: result.generatedCode,
+              summary: `Generated ${intent.type} code`
+            }] : []
           });
           break;
 
@@ -267,46 +237,20 @@ const EnhancedAskQuestionCardContent = () => {
             improvementType: 'optimization'
           });
 
-          // FIXED: Create proper filesReferences for improved code
-          const improvedFilesReferences = [];
-          
-          // Add original files for comparison
-          if (selectedFiles.length > 0) {
-            const originalFiles = await Promise.all(
-              selectedFiles.map(async (fileName) => {
-                return {
-                  fileName: `original-${fileName}`,
-                  sourceCode: "// Original code before improvement",
-                  summary: `Original version of ${fileName}`
-                };
-              })
-            );
-            improvedFilesReferences.push(...originalFiles);
-          }
-
-          // Add the improved code
-          if (result.improvedCode) {
-            const improvedFileName = `improved-${intent.targetFiles?.[0] || 'code'}-${Date.now()}.${result.language || 'ts'}`;
-            
-            improvedFilesReferences.push({
-              fileName: improvedFileName,
-              sourceCode: result.improvedCode,
-              summary: `Improved code: ${result.explanation?.substring(0, 100) || 'AI improved code'}`
-            });
-          }
-
           setResponse({
             type: 'code',
             content: extractSimpleContent(result),
             intent,
             metadata: {
               generatedCode: result.improvedCode,
-              originalCode: result.originalCode,
               diff: result.diff,
-              suggestions: result.suggestions,
-              improvementType: 'code_improvement'
+              suggestions: result.suggestions
             },
-            filesReferences: improvedFilesReferences
+            filesReferences: result.improvedCode ? [{
+              fileName: `improved-${intent.targetFiles?.[0] || 'code'}.${result.language || 'ts'}`,
+              sourceCode: result.improvedCode,
+              summary: `Improved code with ${intent.type}`
+            }] : []
           });
           break;
 
@@ -318,29 +262,6 @@ const EnhancedAskQuestionCardContent = () => {
             focusAreas: question
           });
 
-          // FIXED: Include reviewed files in references
-          const reviewedFilesReferences = [];
-          
-          if (result.filesReviewed && result.filesReviewed.length > 0) {
-            const reviewedFiles = await Promise.all(
-              result.filesReviewed.map(async (fileName: string) => {
-                return {
-                  fileName: `reviewed-${fileName}`,
-                  sourceCode: "// Code that was reviewed",
-                  summary: `Reviewed file: ${fileName}`
-                };
-              })
-            );
-            reviewedFilesReferences.push(...reviewedFiles);
-          }
-
-          // Add review summary as a "file"
-          reviewedFilesReferences.push({
-            fileName: `review-summary-${Date.now()}.md`,
-            sourceCode: `# Code Review Summary\n\n${result.summary}\n\n## Issues Found\n${result.issues?.map((issue: any) => `- ${issue.description}`).join('\n') || 'No issues found'}`,
-            summary: 'Code review summary and findings'
-          });
-
           setResponse({
             type: 'review',
             content: extractSimpleContent(result),
@@ -348,10 +269,8 @@ const EnhancedAskQuestionCardContent = () => {
             metadata: {
               issues: result.issues,
               suggestions: result.suggestions,
-              files: result.filesReviewed,
-              reviewType: 'code_review'
-            },
-            filesReferences: reviewedFilesReferences
+              files: result.filesReviewed
+            }
           });
           break;
 
@@ -363,58 +282,17 @@ const EnhancedAskQuestionCardContent = () => {
             contextLevel: intent.contextNeeded
           });
 
-          // FIXED: Include debug analysis and solutions as files
-          const debugFilesReferences = [];
-          
-          // Add original files being debugged
-          if (selectedFiles.length > 0) {
-            const originalFiles = await Promise.all(
-              selectedFiles.map(async (fileName) => {
-                return {
-                  fileName: `debug-target-${fileName}`,
-                  sourceCode: "// File being debugged",
-                  summary: `Debug target: ${fileName}`
-                };
-              })
-            );
-            debugFilesReferences.push(...originalFiles);
-          }
-
-          // Add debug solutions as files
-          if (result.solutions && result.solutions.length > 0) {
-            result.solutions.forEach((solution: any, index: number) => {
-              if (solution.code) {
-                debugFilesReferences.push({
-                  fileName: `debug-solution-${index + 1}-${Date.now()}.${result.language || 'ts'}`,
-                  sourceCode: solution.code,
-                  summary: `Debug solution: ${solution.description}`
-                });
-              }
-            });
-          }
-
-          // Add debug analysis summary
-          debugFilesReferences.push({
-            fileName: `debug-analysis-${Date.now()}.md`,
-            sourceCode: `# Debug Analysis\n\n## Diagnosis\n${result.diagnosis}\n\n## Solutions\n${result.solutions?.map((s: any) => `- ${s.description}`).join('\n') || 'No solutions provided'}`,
-            summary: 'Debug analysis and solutions'
-          });
-
           setResponse({
             type: 'debug',
             content: extractSimpleContent(result),
             intent,
             metadata: {
-              diagnosis: result.diagnosis,
-              solutions: result.solutions,
               suggestions: result.solutions?.map((s: any) => ({
                 type: 'bug_fix',
                 description: s.description,
                 code: s.code
-              })) || [],
-              debugType: 'debug_analysis'
-            },
-            filesReferences: debugFilesReferences
+              })) || []
+            }
           });
           break;
 
@@ -426,46 +304,17 @@ const EnhancedAskQuestionCardContent = () => {
             detailLevel: 'detailed'
           });
 
-          // FIXED: Include explained files and explanation
-          const explainFilesReferences = [];
-          
-          // Add files being explained
-          if (result.filesAnalyzed && result.filesAnalyzed.length > 0) {
-            const analyzedFiles = await Promise.all(
-              result.filesAnalyzed.map(async (fileName: string) => {
-                return {
-                  fileName: `explained-${fileName}`,
-                  sourceCode: "// Code being explained",
-                  summary: `File being explained: ${fileName}`
-                };
-              })
-            );
-            explainFilesReferences.push(...analyzedFiles);
-          }
-
-          // Add explanation as a markdown file
-          explainFilesReferences.push({
-            fileName: `explanation-${Date.now()}.md`,
-            sourceCode: `# Code Explanation\n\n${result.explanation}\n\n## Key Points\n${result.keyPoints?.map((point: string) => `- ${point}`).join('\n') || 'No key points'}`,
-            summary: 'Code explanation and analysis'
-          });
-
           setResponse({
             type: 'explanation',
             content: extractSimpleContent(result),
             intent,
             metadata: {
-              explanation: result.explanation,
-              keyPoints: result.keyPoints,
-              codeFlow: result.codeFlow,
-              patterns: result.patterns,
-              dependencies: result.dependencies,
-              files: result.filesAnalyzed,
-              explanationType: 'code_explanation'
-            },
-            filesReferences: explainFilesReferences
+              files: result.filesAnalyzed
+            }
           });
           break;
+
+      // Replace your entire default case with this:
 
         default:
           console.log('🔄 Using fallback askQuestion');
@@ -478,34 +327,95 @@ const EnhancedAskQuestionCardContent = () => {
           console.log('📝 QA Result:', qaResult);
 
           let content = '';
-          if (qaResult.output && typeof qaResult.output === 'object') {
-            try {
-              const chunks = [];
-              for await (const chunk of qaResult.output) {
-                chunks.push(chunk);
+          
+          // Enhanced StreamableValue handling
+          if (qaResult.answer) {
+            if (typeof qaResult.answer === 'string') {
+              content = qaResult.answer;
+            } else if (typeof qaResult.answer === 'object') {
+              try {
+                console.log('🔄 Processing StreamableValue:', qaResult.answer);
+                
+                // Handle StreamableValue properly
+                await new Promise<void>((resolve, reject) => {
+                  let accumulated = '';
+                  let attempts = 0;
+                  const maxAttempts = 100; // Max 10 seconds (100 * 100ms)
+                  
+                  const readStream = () => {
+                    attempts++;
+                    
+                    // Check if stream is done
+                    if (qaResult.answer && typeof qaResult.answer === 'object') {
+                      // Try to access the current value
+                      const currentValue = qaResult.answer.value;
+                      
+                      if (currentValue !== undefined) {
+                        if (typeof currentValue === 'string') {
+                          accumulated = currentValue;
+                        } else if (typeof currentValue === 'object') {
+                          // Handle different StreamableValue states
+                          if (currentValue.curr !== undefined) {
+                            accumulated += String(currentValue.curr);
+                          }
+                          if (currentValue.next !== undefined && currentValue.next !== null) {
+                            accumulated += String(currentValue.next);
+                          }
+                          
+                          // If we have some content, use it
+                          if (accumulated.length > 0) {
+                            content = accumulated;
+                            resolve();
+                            return;
+                          }
+                        }
+                      }
+                    }
+                    
+                    // If we have some accumulated content, use it
+                    if (accumulated.length > 0) {
+                      content = accumulated;
+                      resolve();
+                      return;
+                    }
+                    
+                    // Continue waiting if we haven't reached max attempts
+                    if (attempts < maxAttempts) {
+                      setTimeout(readStream, 100);
+                    } else {
+                      // Timeout - use whatever we have or fallback
+                      content = accumulated || 'Response processing timed out';
+                      resolve();
+                    }
+                  };
+                  
+                  readStream();
+                });
+                
+                console.log('✅ Stream processed, content length:', content.length);
+                
+              } catch (error) {
+                console.error('Error processing StreamableValue:', error);
+                content = 'Error processing AI response';
               }
-              content = chunks.join('');
-            } catch (error) {
-              console.error('Error reading stream:', error);
-              content = qaResult.output.value || qaResult.output.toString();
+            } else {
+              content = String(qaResult.answer);
             }
-          } else if (qaResult.output) {
-            content = String(qaResult.output);
-          } else if (qaResult.answer) {
-            content = String(qaResult.answer);
           } else {
             content = 'No response available';
           }
 
-          console.log('✅ Extracted content:', content);
+          console.log('✅ Final content:', content);
 
           setResponse({
             type: 'answer',
-            content: content,
+            content: typeof content === 'string' ? content : JSON.stringify(content),
             intent,
             filesReferences: qaResult.filesReferences || []
           });
           break;
+
+
       }
 
       setProcessingStage('complete');

@@ -1239,6 +1239,32 @@ export const projectRouter = createTRPCRouter({
             }
         })
     }),
+    deleteQuestion: protectedProcedure.input(z.object({
+        questionId: z.string()
+    })).mutation(async ({ctx, input}) => {
+        const question = await ctx.db.question.findUnique({
+            where: {
+                id: input.questionId
+            },
+            select: {
+                userId: true
+            }
+        });
+
+        if (!question) {
+            throw new Error('Question not found');
+        }
+
+        if (question.userId !== ctx.user.userId) {
+            throw new Error('Unauthorized: You can only delete your own questions');
+        }
+
+        return await ctx.db.question.delete({
+            where: {
+                id: input.questionId
+            }
+        });
+    }),
     archiveProject: protectedProcedure.input(z.object({
         projectId: z.string()
     })).mutation(async ({ctx, input}) => {

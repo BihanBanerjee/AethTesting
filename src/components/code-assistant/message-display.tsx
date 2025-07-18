@@ -58,7 +58,7 @@ export const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
           )}
           
           <div className="prose prose-invert max-w-none">
-            {message.content}
+            {typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}
           </div>
 
           {/* Enhanced Code Generation Result */}
