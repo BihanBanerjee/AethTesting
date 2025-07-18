@@ -32,8 +32,12 @@ interface Question {
   createdAt: string | Date;
   user: User;
   intent?: string | null;
-  metadata?: any;
-  filesReferences?: any;
+  metadata?: Record<string, unknown> | string | number | boolean | null | undefined;
+  filesReferences?: {
+    fileName: string;
+    sourceCode: string;
+    summary?: string;
+  }[] | string | number | boolean | null | undefined;
 }
 
 interface QuestionDetailProps {
