@@ -6,9 +6,10 @@ import { Code, Clock, Star, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Question } from '../../types/question';
 
 interface EnhancedQuestionCardProps {
-  question: any;
+  question: Question;
   index: number;
   onClick: () => void;
   onDelete: (id: string) => void;

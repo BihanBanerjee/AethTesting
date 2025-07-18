@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import MDEditor from '@uiw/react-md-editor';
 import CodeReferenceWrapper from '@/app/(protected)/qa/components/code-reference/code-reference-wrapper';
+import { Question } from '../../types/question';
 
 // Enhanced types
 interface EnhancedFileReference {
@@ -19,25 +20,6 @@ interface EnhancedFileReference {
   fileType: 'original' | 'generated' | 'improved' | 'reviewed' | 'debug_target' | 'debug_solution' | 'explanation' | 'summary';
   intent?: string;
   isGenerated: boolean;
-}
-
-interface User {
-  imageUrl: string | null;
-  firstName?: string | null;
-}
-
-interface Question {
-  question: string;
-  answer: string;
-  createdAt: string | Date;
-  user: User;
-  intent?: string | null;
-  metadata?: Record<string, unknown> | string | number | boolean | null | undefined;
-  filesReferences?: {
-    fileName: string;
-    sourceCode: string;
-    summary?: string;
-  }[] | unknown[] | Record<string, unknown> | string | number | boolean | null | undefined;
 }
 
 interface QuestionDetailProps {

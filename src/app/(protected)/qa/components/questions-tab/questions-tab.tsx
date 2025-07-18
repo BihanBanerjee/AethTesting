@@ -8,9 +8,10 @@ import EnhancedQuestionCard from '../enhanced-question-card/enhanced-question-ca
 import StatisticsOverview from '../statistics-overview/statistics-overview';
 import EnhancedAskQuestionCard from '../../../dashboard/ask-question-card';
 import { Statistics } from '../../types/statistics';
+import { Question } from '../../types/question';
 
 interface QuestionsTabProps {
-  questions: any[];
+  questions: Question[];
   statistics: Statistics | null | undefined;
   filters: {
     intent: 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain' | undefined;
