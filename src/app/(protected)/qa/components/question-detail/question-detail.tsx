@@ -22,7 +22,7 @@ interface EnhancedFileReference {
 }
 
 interface User {
-  imageUrl: string;
+  imageUrl: string | null;
   firstName?: string;
 }
 
