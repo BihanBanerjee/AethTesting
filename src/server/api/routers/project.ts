@@ -1103,6 +1103,27 @@ export const projectRouter = createTRPCRouter({
                         userId: question.userId,
                         query: question.question
                     },
+                    select: {
+                        id: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        query: true,
+                        intent: true,
+                        confidence: true,
+                        helpful: true,
+                        rating: true,
+                        responseTime: true,
+                        userId: true,
+                        projectId: true,
+                        contextFiles: true,
+                        metadata: true,
+                        modelUsed: true,
+                        responseType: true,
+                        success: true,
+                        errorMessage: true,
+                        feedback: true,
+                        tokenCount: true
+                    },
                     orderBy: { createdAt: 'desc' },
                     take: 1
                 });

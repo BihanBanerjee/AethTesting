@@ -10,8 +10,8 @@ export interface User {
 export interface DisplayProperties {
   intentIcon: string;
   intentColor: string;
-  confidenceLevel: string;
-  satisfactionLevel: string;
+  confidenceLevel: string | null;
+  satisfactionLevel: string | null;
   hasGeneratedCode: boolean;
   hasFileReferences: boolean;
   processingTimeFormatted: string | null;
@@ -22,7 +22,6 @@ export interface AiInteraction {
   createdAt: Date;
   updatedAt: Date;
   query: string;
-  answer: string;
   intent: string;
   confidence: number | null;
   helpful: boolean | null;
@@ -30,11 +29,14 @@ export interface AiInteraction {
   responseTime: number | null;
   userId: string;
   projectId: string;
-  sessionId: string | null;
-  contextUsed: boolean;
-  filesUsed: string[];
+  contextFiles: any | null;
   metadata: any | null;
   modelUsed: string | null;
+  responseType: string | null;
+  success: boolean;
+  errorMessage: string | null;
+  feedback: string | null;
+  tokenCount: number | null;
 }
 
 export interface CodeGeneration {
@@ -43,22 +45,22 @@ export interface CodeGeneration {
   updatedAt: Date;
   userId: string;
   projectId: string;
-  aiInteractionId: string;
-  fileName: string;
-  originalCode: string | null;
-  generatedCode: string;
-  applied: boolean;
-  satisfaction: number | null;
+  prompt: string;
+  intent: string;
+  requirements: any | null;
+  contextFiles: any | null;
+  generatedCode: string | null;
+  filename: string | null;
   language: string | null;
-  linesOfCode: number | null;
   complexity: number | null;
-  changeType: string | null;
-  description: string | null;
-  dependencies: string[];
-  testCoverage: number | null;
-  performanceImpact: string | null;
-  securityChecked: boolean;
-  metadata: any | null;
+  linesOfCode: number | null;
+  applied: boolean;
+  modified: boolean;
+  satisfaction: number | null;
+  modelUsed: string | null;
+  tokenCount: number | null;
+  generationTime: number | null;
+  timesSaved: number | null;
 }
 
 export interface Analytics {

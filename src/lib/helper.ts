@@ -187,6 +187,7 @@ export async function getQuestionStatistics(db: any, projectId: string, timeRang
         }, {} as Record<string, number>),
         satisfaction: {
             average: satisfactionStats._avg.satisfaction,
+            avgRating: satisfactionStats._avg.satisfaction,
             totalRatings: satisfactionStats._count.satisfaction
         },
         confidence: {
@@ -200,6 +201,8 @@ export async function getQuestionStatistics(db: any, projectId: string, timeRang
             totalApplied: appliedCount,  // 👈 FIXED: Use separate count
             totalModified: modifiedCount,  // 👈 NEW: Also get modified count
             totalLinesGenerated: codeGenerationStats._sum.linesOfCode,
+            avgLinesOfCode: codeGenerationStats._sum.linesOfCode && codeGenerationStats._count.id > 0 ? 
+                codeGenerationStats._sum.linesOfCode / codeGenerationStats._count.id : 0,
             avgSatisfaction: codeGenerationStats._avg.satisfaction,
             applicationRate: codeGenerationStats._count.id > 0 ? 
                 appliedCount / codeGenerationStats._count.id : 0  // 👈 FIXED: Use separate count
