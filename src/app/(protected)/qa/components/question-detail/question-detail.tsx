@@ -37,7 +37,7 @@ interface Question {
     fileName: string;
     sourceCode: string;
     summary?: string;
-  }[];
+  }[] | null;
 }
 
 interface QuestionDetailProps {
