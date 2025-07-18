@@ -3,9 +3,10 @@
 import React from 'react';
 import { BarChart3, Star, Code, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Statistics } from '../../types/statistics';
 
 interface StatisticsOverviewProps {
-  statistics: any;
+  statistics: Statistics | null | undefined;
 }
 
 const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ statistics }) => {

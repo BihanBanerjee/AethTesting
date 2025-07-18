@@ -11,7 +11,6 @@ import { SyntaxHighlighter, customCodeStyle } from '@/utils/code/syntax-highligh
 import MDEditor from '@uiw/react-md-editor';
 import { 
   FileText, 
-  Code, 
   Sparkles, 
   Zap, 
   Search, 
@@ -68,7 +67,7 @@ const CodeReferenceWrapper = React.forwardRef<{ activeFileIndex: number }, CodeR
   const enhancedFiles = useMemo(() => {
     if (!props.filesReferences || props.filesReferences.length === 0) return [];
 
-    return props.filesReferences.map((file, index): EnhancedFileReference => {
+    return props.filesReferences.map((file): EnhancedFileReference => {
       const fileName = file.fileName;
       const fileType = determineFileType(fileName);
       const isGenerated = isGeneratedFile(fileType);
@@ -147,8 +146,11 @@ const CodeReferenceWrapper = React.forwardRef<{ activeFileIndex: number }, CodeR
   // Set initial active file
   React.useEffect(() => {
     if (enhancedFiles.length > 0 && !activeFile) {
-      setActiveFile(enhancedFiles[0].fileName);
-      setActiveFileIndex(0);
+      const firstFile = enhancedFiles[0];
+      if (firstFile) {
+        setActiveFile(firstFile.fileName);
+        setActiveFileIndex(0);
+      }
     }
   }, [enhancedFiles, activeFile]);
 

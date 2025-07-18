@@ -4,9 +4,10 @@ import React from 'react';
 import { TrendingUp, BarChart3, Code, Star, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Statistics } from '../../types/statistics';
 
 interface AnalyticsDashboardProps {
-  statistics: any;
+  statistics: Statistics | null | undefined;
   filters: {
     timeRange: 'day' | 'week' | 'month' | 'all';
   };

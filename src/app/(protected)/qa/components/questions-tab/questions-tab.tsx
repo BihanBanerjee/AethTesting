@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import EnhancedQuestionCard from '../enhanced-question-card/enhanced-question-card';
 import StatisticsOverview from '../statistics-overview/statistics-overview';
 import EnhancedAskQuestionCard from '../../../dashboard/ask-question-card';
+import { Statistics } from '../../types/statistics';
 
 interface QuestionsTabProps {
   questions: any[];
-  statistics: any;
+  statistics: Statistics | null | undefined;
   filters: {
     intent: 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain' | undefined;
     timeRange: 'day' | 'week' | 'month' | 'all';
