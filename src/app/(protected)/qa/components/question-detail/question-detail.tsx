@@ -29,7 +29,7 @@ interface User {
 interface Question {
   question: string;
   answer: string;
-  createdAt: string;
+  createdAt: string | Date;
   user: User;
   intent?: string;
   metadata?: any;
