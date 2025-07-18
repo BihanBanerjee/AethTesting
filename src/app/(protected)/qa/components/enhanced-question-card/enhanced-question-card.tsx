@@ -6,7 +6,7 @@ import { Code, Clock, Star, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Question } from '../../types/question';
+import type { Question } from '../../types/question';
 
 interface EnhancedQuestionCardProps {
   question: Question;
@@ -125,7 +125,7 @@ const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
             <div className="flex items-center gap-4 text-white/50">
               <span>
                 {/* Show file references OR generated code count */}
-                {question.filesReferences?.length > 0 ? 
+                {question.filesReferences && question.filesReferences.length > 0 ? 
                   `${question.filesReferences.length} file references` :
                   hasGeneratedCode ? 
                     '1 generated file' :

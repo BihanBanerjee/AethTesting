@@ -31,6 +31,6 @@ export interface Question {
   user: User;
   displayProperties: DisplayProperties;
   analytics: Analytics;
-  filesReferences?: FileReference[];
+  filesReferences: FileReference[] | null;
   metadata?: Record<string, unknown> | string | number | boolean | null | undefined;
 }
