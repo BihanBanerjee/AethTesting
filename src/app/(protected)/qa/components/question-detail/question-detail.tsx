@@ -37,7 +37,7 @@ interface Question {
     fileName: string;
     sourceCode: string;
     summary?: string;
-  }[] | string | number | boolean | null | undefined;
+  }[] | Record<string, unknown> | string | number | boolean | null | undefined;
 }
 
 interface QuestionDetailProps {
