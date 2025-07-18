@@ -3,24 +3,12 @@
 
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Clock, Copy, X, FileText, Code, Star, Sparkles, Bug, Zap, Search, Lightbulb, Wrench } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronLeft, Clock, Copy, X, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
-import MDEditor from '@uiw/react-md-editor';
-import CodeReferenceWrapper from '@/app/(protected)/qa/components/code-reference/code-reference-wrapper';
-import { Question } from '../../types/question';
+import { AnswerTabContent, CodeTabContent, getClipboardContent } from './tab-content';
+import type { Question } from '../../types/question';
 
 // Enhanced types
-interface EnhancedFileReference {
-  fileName: string;
-  sourceCode: string;
-  summary: string;
-  fileType: 'original' | 'generated' | 'improved' | 'reviewed' | 'debug_target' | 'debug_solution' | 'explanation' | 'summary';
-  intent?: string;
-  isGenerated: boolean;
-}
 
 interface QuestionDetailProps {
   question: Question;
@@ -40,17 +28,22 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
   
   // Copy content to clipboard based on active tab
   const copyToClipboard = () => {
-    if (activeTab === 'answer') {
-      navigator.clipboard.writeText(question.answer);
-      toast.success('Answer copied to clipboard');
-    } else if (activeTab === 'code' && question.filesReferences && question.filesReferences.length > 0) {
-      const activeFileIndex = codeWrapperRef.current?.activeFileIndex || 0;
-      const activeFile = question.filesReferences[activeFileIndex];
+    try {
+      const { content, filename } = getClipboardContent(activeTab, question, codeWrapperRef.current || { activeFileIndex: 0 });
       
-      if (activeFile) {
-        navigator.clipboard.writeText(activeFile.sourceCode);
-        toast.success(`Code from ${activeFile.fileName} copied to clipboard`);
+      if (content) {
+        navigator.clipboard.writeText(content);
+        if (filename) {
+          toast.success(`Code from ${filename} copied to clipboard`);
+        } else {
+          toast.success(`${activeTab === 'answer' ? 'Answer' : 'Content'} copied to clipboard`);
+        }
+      } else {
+        toast.error('No content to copy');
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      toast.error('Failed to copy to clipboard');
     }
   };
 
@@ -150,51 +143,12 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
           <div className="flex-1 overflow-hidden flex flex-col relative bg-gradient-to-br from-indigo-900/20 to-purple-900/10">
             {/* Answer Tab Content */}
             {activeTab === 'answer' && (
-              <div className="absolute inset-0 p-6 opacity-100 z-10 overflow-y-auto">
-                <div className="flex items-start mb-4">
-                  <div className="bg-indigo-600/30 p-2 rounded-full mr-3">
-                    <FileText className="h-5 w-5 text-indigo-200" />
-                  </div>
-                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
-                    AI Answer
-                  </h3>
-                </div>
-                <div className="h-[calc(100%-3rem)] overflow-auto pr-2">
-                  <MDEditor.Markdown 
-                    source={question.answer} 
-                    className='w-full overflow-auto custom-markdown' 
-                    style={{ 
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-                      color: 'white',
-                      borderRadius: '0.5rem',
-                      padding: '1.5rem'
-                    }} 
-                  />
-                </div>
-              </div>
+              <AnswerTabContent question={question} />
             )}
 
             {/* Files & Code Tab Content */}
             {activeTab === 'code' && (
-              <div className="absolute inset-0 p-6 opacity-100 z-10 overflow-hidden">
-                <div className="flex items-start mb-4">
-                  <div className="bg-indigo-600/30 p-2 rounded-full mr-3">
-                    <Code className="h-5 w-5 text-indigo-200" />
-                  </div>
-                  <h3 className="text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
-                    Files & Code
-                  </h3>
-                </div>
-                <div className="h-[calc(100%-3rem)] glassmorphism border border-indigo-500/20 rounded-xl p-4 bg-indigo-950/30 shadow-inner overflow-hidden">
-                  <div className="h-[60vh]">
-                    <CodeReferenceWrapper
-                      ref={codeWrapperRef}
-                      filesReferences={question.filesReferences ?? []} 
-                      className="h-full"
-                    />
-                  </div>
-                </div>
-              </div>
+              <CodeTabContent question={question} codeWrapperRef={codeWrapperRef} />
             )}
           </div>
         </div>

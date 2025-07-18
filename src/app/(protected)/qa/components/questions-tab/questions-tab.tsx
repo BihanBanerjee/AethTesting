@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import EnhancedQuestionCard from '../enhanced-question-card/enhanced-question-card';
 import StatisticsOverview from '../statistics-overview/statistics-overview';
 import EnhancedAskQuestionCard from '../../../dashboard/ask-question-card';
-import { Statistics } from '../../types/statistics';
-import { Question } from '../../types/question';
+import type { Statistics } from '../../types/statistics';
+import type { Question } from '../../types/question';
 
 interface QuestionsTabProps {
   questions: Question[];

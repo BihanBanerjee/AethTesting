@@ -6,15 +6,7 @@ import { FileText, Code } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import CodeReferenceWrapper from '../code-reference/code-reference-wrapper';
 import { cleanSourceCode } from '../../../../../utils/code/language-utils';
-
-// Types
-interface Question {
-  answer: string;
-  filesReferences?: {
-    fileName: string;
-    sourceCode: string;
-  }[];
-}
+import type { Question } from '../../types/question';
 
 interface AnswerTabContentProps {
   question: Question;
@@ -66,7 +58,7 @@ export const CodeTabContent: React.FC<CodeTabContentProps> = ({ question, codeWr
       <div className="h-[calc(100%-3rem)] glassmorphism border border-indigo-500/20 rounded-xl p-4 bg-indigo-950/30 shadow-inner">
         <CodeReferenceWrapper 
           ref={codeWrapperRef}
-          filesReferences={question.filesReferences ?? []} 
+          filesReferences={question.filesReferences || []} 
         />
       </div>
     </div>
@@ -77,7 +69,7 @@ export const getActiveTabContent = (
   activeTab: string,
   question: Question,
   codeWrapperRef: React.RefObject<{ activeFileIndex: number }>
-): JSX.Element => {
+): React.ReactElement => {
   if (activeTab === 'answer') {
     return <AnswerTabContent question={question} />;
   } else {
@@ -93,7 +85,7 @@ export const getClipboardContent = (
 ): { content: string; filename?: string } => {
   if (activeTab === 'answer') {
     return { content: question.answer };
-  } else if (activeTab === 'code' && question.filesReferences?.length > 0) {
+  } else if (activeTab === 'code' && question.filesReferences && question.filesReferences.length > 0) {
     const activeFileIndex = codeWrapperRef.activeFileIndex;
     const activeFile = question.filesReferences[activeFileIndex];
     
