@@ -33,11 +33,7 @@ interface Question {
   user: User;
   intent?: string | null;
   metadata?: any;
-  filesReferences?: {
-    fileName: string;
-    sourceCode: string;
-    summary?: string;
-  }[] | null;
+  filesReferences?: any;
 }
 
 interface QuestionDetailProps {
