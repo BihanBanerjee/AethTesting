@@ -13,7 +13,7 @@ import { ChatInput } from '@/components/code-assistant/chat-input';
 import { EmptyState } from '@/components/code-assistant/empty-state';
 import { IntentProgressTracker } from '@/components/code-assistant/intent-progress-tracker';
 import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
-import { CodeGenerationPanel } from '@/components/code/code-generation-panel';
+import { CodeGenerationPanel } from '@/components/code/code-generation';
 import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { IntentClassifierProvider } from '@/components/code-assistant/intent-classifier-wrapper';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';

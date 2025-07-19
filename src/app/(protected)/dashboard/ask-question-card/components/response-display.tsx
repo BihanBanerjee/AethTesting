@@ -4,8 +4,8 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { CodeBlock } from '@/components/code/enhanced-code-block';
-import { DiffViewer } from '@/components/code/diff-viewer';
+import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
+import { DiffViewer } from '@/components/code/diff-viewer/index';
 import CodeReferences from '../../code-references';
 // import { EnhancedSaveButton } from '@/components/feedback/enhanced-save-button';
 import MDEditor from '@uiw/react-md-editor';

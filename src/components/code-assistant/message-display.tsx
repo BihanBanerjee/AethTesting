@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Copy, Download, RefreshCw, Sparkles, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
-import { CodeBlock } from '@/components/code/enhanced-code-block';
-import { DiffViewer } from '@/components/code/diff-viewer';
+import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
+import { DiffViewer } from '@/components/code/diff-viewer/index';
 import { getIntentIcon, getIntentColor, copyToClipboard, downloadCode } from '@/utils/intent-helpers';
 import type { Message } from '@/types/code-assistant';
 
