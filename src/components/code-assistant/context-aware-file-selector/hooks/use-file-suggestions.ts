@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useIntentClassifier } from '../../intent-classifier-wrapper';
 import { getFilesForIntent } from '../utils/intent-file-mapping';
-import type { IntentClassificationResult } from '../types';
+import type { IntentClassificationResult, IntentType } from '../types';
 
 export const useFileSuggestions = (
   currentQuery: string | undefined,
@@ -28,7 +28,8 @@ export const useFileSuggestions = (
         const relevantFiles = intent.targetFiles || [];
         
         // Add additional heuristics based on intent type
-        const additionalFiles = getFilesForIntent(intent.type as any, availableFiles, currentQuery);
+        const intentType = intent.type as IntentType;
+        const additionalFiles = getFilesForIntent(intentType, availableFiles, currentQuery);
         
         const allSuggested = [...new Set([...relevantFiles, ...additionalFiles])];
         setSuggestedFiles(allSuggested.slice(0, 5));
