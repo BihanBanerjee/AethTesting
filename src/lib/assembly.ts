@@ -53,7 +53,8 @@ export const submitMeetingForProcessing = async (meetingUrl: string) => {
         };
     } catch (error) {
         console.error('Error submitting transcription:', error);
-        throw new Error(`Failed to submit transcription: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        throw new Error(`Failed to submit transcription: ${errorMessage}`);
     }
 }
 
@@ -71,7 +72,8 @@ export const checkTranscriptionStatus = async (transcriptId: string) => {
         };
     } catch (error) {
         console.error('Error checking transcription status:', error);
-        throw new Error(`Failed to check status: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        throw new Error(`Failed to check status: ${errorMessage}`);
     }
 }
 
@@ -99,6 +101,7 @@ export const retrieveTranscriptionResults = async (transcriptId: string) => {
         return { summaries };
     } catch (error) {
         console.error('Error retrieving transcription results:', error);
-        throw new Error(`Failed to retrieve results: ${error.message}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        throw new Error(`Failed to retrieve results: ${errorMessage}`);
     }
 }
