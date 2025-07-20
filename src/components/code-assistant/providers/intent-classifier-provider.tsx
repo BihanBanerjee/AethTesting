@@ -5,6 +5,7 @@ import { IntentClassifier, type QueryIntent } from '@/lib/intent-classifier';
 import { toast } from 'sonner';
 import { IntentClassifierContext } from '../context/intent-classifier-context';
 import { createFallbackIntent } from '../utils/fallback-classifier';
+import type { ProjectContext } from '../types/intent-classifier.types';
 
 export const IntentClassifierProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [classifier, setClassifier] = useState<IntentClassifier | null>(null);
@@ -40,7 +41,7 @@ export const IntentClassifierProvider: React.FC<{ children: React.ReactNode }> =
     initClassifier();
   }, []);
 
-  const classifyQuery = async (query: string, context?: any): Promise<QueryIntent> => {
+  const classifyQuery = async (query: string, context?: ProjectContext): Promise<QueryIntent> => {
     if (!classifier) {
       // Return default classification if classifier not ready
       return createFallbackIntent(query);
