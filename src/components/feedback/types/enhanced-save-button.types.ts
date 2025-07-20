@@ -37,8 +37,122 @@ export interface Project {
   name: string;
 }
 
+export interface FileReference {
+  fileName: string;
+  sourceCode: string;
+  summary: string;
+}
+
+export interface FeedbackData {
+  rating?: number;
+  helpful?: boolean;
+  feedback?: string;
+  applied?: boolean;
+  modified?: boolean;
+}
+
+export interface IntentMetadata {
+  type: string;
+  confidence: number;
+  requiresCodeGen: boolean;
+  requiresFileModification: boolean;
+  contextNeeded: string;
+  targetFiles: string[];
+}
+
+export interface GeneratedCodeMetadata {
+  content: string;
+  language: string;
+  filename: string;
+  type: 'code_snippet' | 'new_file';
+}
+
+export interface ImprovementsMetadata {
+  improvedCode: string;
+  improvementType: 'optimization';
+  diff?: string;
+  suggestions?: Array<{
+    type: string;
+    description: string;
+    code?: string;
+  }>;
+}
+
+export interface ReviewMetadata {
+  reviewType: 'comprehensive';
+  issues?: Array<{
+    type: string;
+    severity: string;
+    description: string;
+    suggestion: string;
+  }>;
+  summary: string;
+}
+
+export interface DebugMetadata {
+  diagnosis: string;
+  solutions?: Array<{
+    type: 'fix';
+    description: string;
+    code?: string;
+    priority: 'medium';
+  }>;
+  investigationSteps: unknown[];
+}
+
+export interface ExplanationMetadata {
+  detailLevel: 'detailed';
+  keyPoints: unknown[];
+  codeFlow: unknown[];
+  patterns: unknown[];
+  dependencies: string[];
+}
+
+export interface RefactorMetadata {
+  refactoredCode?: string;
+  changes: unknown[];
+  preserveAPI: boolean;
+  apiChanges: string[];
+}
+
+export interface EnhancedMetadata {
+  intent?: IntentMetadata;
+  generatedCode?: GeneratedCodeMetadata;
+  improvements?: ImprovementsMetadata;
+  review?: ReviewMetadata;
+  debug?: DebugMetadata;
+  explanation?: ExplanationMetadata;
+  refactor?: RefactorMetadata;
+  performance: {
+    processingTime: number;
+    responseTime: number;
+  };
+  filesReferences: FileReference[];
+  contextFiles: string[];
+  userFeedback?: FeedbackData;
+  sessionId: string;
+  timestamp: Date;
+}
+
+export interface SaveAnswerData {
+  projectId: string;
+  question: string;
+  answer: string;
+  filesReferences: FileReference[];
+  metadata: EnhancedMetadata | Record<string, never>;
+}
+
+export interface SaveAnswerResult {
+  analytics?: {
+    aiInteractionCreated?: boolean;
+    codeGenerationCreated?: boolean;
+    fileAnalyticsUpdated?: number;
+    suggestionFeedbackCreated?: boolean;
+  };
+}
+
 export interface SaveAnswerMutation {
-  mutate: (data: any, options?: { onSuccess?: (result: any) => void; onError?: (error: any) => void }) => void;
+  mutate: (data: SaveAnswerData, options?: { onSuccess?: (result: SaveAnswerResult) => void; onError?: (error: Error) => void }) => void;
   isPending: boolean;
 }
 
@@ -49,29 +163,4 @@ export interface EnhancedSaveButtonProps {
   selectedFiles: string[];
   saveAnswer: SaveAnswerMutation;
   refetch: () => void;
-}
-
-export interface FileReference {
-  fileName: string;
-  sourceCode: string;
-  summary: string;
-}
-
-export interface EnhancedMetadata {
-  intent?: any;
-  generatedCode?: any;
-  improvements?: any;
-  review?: any;
-  debug?: any;
-  explanation?: any;
-  refactor?: any;
-  performance: {
-    processingTime: number;
-    responseTime: number;
-  };
-  filesReferences: FileReference[];
-  contextFiles: string[];
-  userFeedback?: any;
-  sessionId: string;
-  timestamp: Date;
 }

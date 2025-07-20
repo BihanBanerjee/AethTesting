@@ -1,10 +1,10 @@
-import type { EnhancedResponse, EnhancedMetadata } from '../types/enhanced-save-button.types';
+import type { EnhancedResponse, EnhancedMetadata, FeedbackData } from '../types/enhanced-save-button.types';
 import { createEnhancedFileReferences } from './file-references';
 
 export function buildEnhancedMetadata(
   response: EnhancedResponse | null,
   selectedFiles: string[],
-  feedback?: any
+  feedback?: FeedbackData
 ): EnhancedMetadata | {} {
   if (!response) return {};
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { buildEnhancedMetadata } from '../utils/metadata-builder';
 import { createEnhancedFileReferences } from '../utils/file-references';
-import type { EnhancedResponse, Project, SaveAnswerMutation } from '../types/enhanced-save-button.types';
+import type { EnhancedResponse, Project, SaveAnswerMutation, FeedbackData } from '../types/enhanced-save-button.types';
 
 export function useSaveHandler(
   response: EnhancedResponse | null,
@@ -16,7 +16,7 @@ export function useSaveHandler(
 ) {
   const [showFeedback, setShowFeedback] = useState(false);
 
-  const handleSaveWithFeedback = (feedback?: any) => {
+  const handleSaveWithFeedback = (feedback?: FeedbackData) => {
     if (!response || !project) {
       toast.error('No response or project available to save');
       return;
