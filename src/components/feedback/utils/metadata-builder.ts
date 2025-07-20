@@ -5,7 +5,7 @@ export function buildEnhancedMetadata(
   response: EnhancedResponse | null,
   selectedFiles: string[],
   feedback?: FeedbackData
-): EnhancedMetadata | {} {
+): EnhancedMetadata | Record<string, never> {
   if (!response) return {};
 
   const enhancedFilesReferences = createEnhancedFileReferences(response);
@@ -25,7 +25,7 @@ export function buildEnhancedMetadata(
     generatedCode: response.metadata?.generatedCode ? {
       content: response.metadata.generatedCode,
       language: response.metadata.language || 'typescript',
-      filename: response.metadata.filename || `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
+      filename: `generated-${response.intent?.type}.${response.metadata.language === 'typescript' ? 'ts' : 'js'}`,
       type: response.type === 'answer' ? 'code_snippet' as const : 
             response.type === 'code' ? 'new_file' as const :
             'code_snippet' as const

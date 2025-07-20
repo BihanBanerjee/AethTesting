@@ -34,7 +34,7 @@ export const FeedbackCollector: React.FC<FeedbackCollectorProps> = ({
   const submitFeedback = () => {
     const feedback: FeedbackData = {
       rating: rating > 0 ? rating : undefined,
-      helpful,
+      helpful: helpful !== null ? helpful : undefined,
       feedback: feedbackText.trim() || undefined,
       applied: hasGeneratedCode ? applied : undefined,
       modified: hasGeneratedCode ? modified : undefined
