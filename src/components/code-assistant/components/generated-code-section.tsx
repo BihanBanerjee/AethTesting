@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
-import { getIntentIcon } from '@/utils/intent-helpers';
+import { getIntentIcon } from '@/lib/intent';
 import { MessageActionButtons } from './message-action-buttons';
 import type { GeneratedCodeSectionProps } from '../types/message-display.types';
 

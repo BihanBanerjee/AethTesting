@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure} from "../trpc";
 import { pollCommits } from "@/lib/github";
-import { checkCredits } from "@/lib/github-loader";
+import { checkCredits } from "@/lib/github";
 import { inngest } from "@/lib/inngest/client";
-import { calculateQuestionImpact, formatProcessingTime, getConfidenceLevel, getIntentColor, getIntentIcon, getQuestionStatistics, getSatisfactionLevel } from "@/lib/helper";
+import { calculateQuestionImpact, formatProcessingTime, getConfidenceLevel, getIntentColor, getIntentIcon, getQuestionStatistics, getSatisfactionLevel } from "@/lib/intent";
 
 export const projectRouter = createTRPCRouter({
     createProject: protectedProcedure.input(
@@ -146,7 +146,7 @@ export const projectRouter = createTRPCRouter({
             }).optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        const { CodeGenerationEngine } = await import('@/lib/code-generation-engine');
+        const { CodeGenerationEngine } = await import('@/lib/code-generation');
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         
         const classifier = new IntentClassifier();
@@ -184,7 +184,7 @@ export const projectRouter = createTRPCRouter({
             improvementType: z.enum(['performance', 'readability', 'security', 'optimization']).optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        const { CodeGenerationEngine } = await import('@/lib/code-generation-engine');
+        const { CodeGenerationEngine } = await import('@/lib/code-generation');
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         
         const classifier = new IntentClassifier();
@@ -445,7 +445,7 @@ export const projectRouter = createTRPCRouter({
             preserveAPI: z.boolean().default(true)
         })
     ).mutation(async ({ ctx, input }) => {
-        const { CodeGenerationEngine } = await import('@/lib/code-generation-engine');
+        const { CodeGenerationEngine } = await import('@/lib/code-generation');
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         
         const classifier = new IntentClassifier();
@@ -1158,7 +1158,17 @@ export const projectRouter = createTRPCRouter({
                         interactions: aiInteractions,
                         codeGenerations: codeGenerations,
                         hasEnhancedData: !!(aiInteractions.length || codeGenerations.length),
-                        estimatedImpact: calculateQuestionImpact(question, aiInteractions, codeGenerations)
+                        estimatedImpact: calculateQuestionImpact(
+                            { 
+                                intent: question.intent ?? undefined,
+                                satisfaction: question.satisfaction ?? undefined
+                            }, 
+                            aiInteractions, 
+                            codeGenerations.map(cg => ({
+                                applied: cg.applied,
+                                linesOfCode: cg.linesOfCode ?? undefined
+                            }))
+                        )
                     },
                     // Enhanced display properties
                     displayProperties: {

@@ -1,6 +1,6 @@
 // src/app/api/webhook/github/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { WebhookProcessor, verifyGitHubSignature } from '@/lib/webhook-helpers';
+import { WebhookProcessor, verifyGitHubSignature } from '@/lib/webhooks';
 
 interface GitHubWebhookPayload {
   action: string;

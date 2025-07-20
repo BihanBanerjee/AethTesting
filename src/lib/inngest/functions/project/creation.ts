@@ -1,5 +1,5 @@
 import { inngest } from "../../client";
-import { loadGithubRepo } from "@/lib/github-loader";
+import { loadGithubRepo } from "@/lib/github";
 import { summariseCode, generateEmbedding } from "@/lib/gemini";
 import { db } from "@/server/db";
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { toast } from 'sonner';
-import { copyToClipboard, downloadCode } from '@/utils/intent-helpers';
+import { copyToClipboard, downloadCode } from '@/lib/intent';
 
 export function useMessageActions() {
   const handleCopy = (text: string) => {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { getIntentIcon, getIntentColor } from '@/utils/intent-helpers';
+import { getIntentIcon, getIntentColor } from '@/lib/intent';
 import type { MessageHeaderProps } from '../types/message-display.types';
 
 export const MessageHeader: React.FC<MessageHeaderProps> = ({
