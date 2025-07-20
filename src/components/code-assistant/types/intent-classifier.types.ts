@@ -1,4 +1,4 @@
-import type { QueryIntent } from '@/lib/intent-classifier';
+import type { QueryIntent, IntentClassifier } from '@/lib/intent-classifier';
 
 export interface ProjectContext {
   availableFiles?: string[];
@@ -8,7 +8,7 @@ export interface ProjectContext {
 }
 
 export interface IntentClassifierContextType {
-  classifier: any | null;
+  classifier: IntentClassifier | null;
   classifyQuery: (query: string, context?: ProjectContext) => Promise<QueryIntent>;
   isReady: boolean;
   hasApiKey: boolean;
