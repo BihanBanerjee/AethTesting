@@ -3,13 +3,10 @@
 
 import React from 'react';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 // import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { IntentClassifierProvider } from '@/components/code-assistant/intent-classifier-wrapper';
 import { MessageSquare, Sparkles } from 'lucide-react';
-import Image from 'next/image';
 
 // Import hooks
 import { useQuestionState } from './hooks/use-question-state';
@@ -95,7 +92,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
 
   return (
     <div className="w-full">
-      <GlassmorphicCard className="p-6 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl">
+      <GlassmorphicCard className="p-6 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl h-full">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 rounded-lg">

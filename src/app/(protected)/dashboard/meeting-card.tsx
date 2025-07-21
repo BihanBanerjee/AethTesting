@@ -79,7 +79,7 @@ const MeetingCard = () => {
     
     return (
         <GlassmorphicCard 
-            className='col-span-2 flex flex-col items-center justify-center p-8 cursor-pointer border-dashed border-2 hover:border-indigo-400/50 transition-colors'
+            className='flex flex-col items-center justify-center p-8 cursor-pointer border-dashed border-2 hover:border-indigo-400/50 transition-colors h-full'
             {...getRootProps()}
         >
             {!isUploading && (

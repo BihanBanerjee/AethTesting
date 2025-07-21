@@ -51,7 +51,7 @@ const DashboardPage = () => {
       </div>
 
       <div className="mt-6">
-        <div className='grid grid-cols-1 gap-6 sm:grid-cols-5'>
+        <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
           {/* Use the enhanced ask question card with all integrations */}
           <EnhancedAskQuestionCard />
           <MeetingCard />
