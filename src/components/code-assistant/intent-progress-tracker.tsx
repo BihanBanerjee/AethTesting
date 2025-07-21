@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 interface IntentProgressTrackerProps {
-  intent: string;
+  intent: string | null | undefined;
   confidence: number;
   stage: 'analyzing' | 'processing' | 'generating' | 'complete' | 'error';
   progress: number;
@@ -33,6 +33,8 @@ export const IntentProgressTracker: React.FC<IntentProgressTrackerProps> = ({
   currentStep
 }) => {
   const getIntentIcon = () => {
+    if (!intent) return <Clock className="h-4 w-4 animate-pulse" />;
+    
     switch (intent) {
       case 'code_generation': return <Code className="h-4 w-4" />;
       case 'code_improvement': return <Zap className="h-4 w-4" />;
@@ -76,10 +78,10 @@ export const IntentProgressTracker: React.FC<IntentProgressTrackerProps> = ({
         <div className="flex items-center gap-2">
           {getIntentIcon()}
           <span className="font-medium text-white">
-            {intent.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            {intent ? intent.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Processing...'}
           </span>
           <Badge variant="outline" className="text-xs">
-            {Math.round(confidence * 100)}% confidence
+            {Math.round((confidence || 0) * 100)}% confidence
           </Badge>
         </div>
         
