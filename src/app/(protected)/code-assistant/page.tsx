@@ -51,12 +51,6 @@ const CodeAssistantPageContent = () => {
     projectContext
   } = useCodeAssistant();
 
-  console.log('Messages array:', messages);
-  messages.forEach((msg, index) => {
-    console.log(`Message ${index}:`, msg);
-    console.log(`Message ${index} content type:`, typeof msg.content);
-    console.log(`Message ${index} content:`, msg.content);
-  });
 
   const handleRemoveFile = (file: string) => {
     setSelectedFiles(prev => prev.filter(f => f !== file));

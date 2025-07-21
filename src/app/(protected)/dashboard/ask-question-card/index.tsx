@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 // import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { IntentClassifierProvider } from '@/components/code-assistant/intent-classifier-wrapper';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { MessageSquare, Sparkles, Maximize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Import hooks
 import { useQuestionState } from './hooks/use-question-state';
@@ -17,6 +18,7 @@ import { useIntentHandling } from './hooks/use-intent-handling';
 import { QuestionInput } from './components/question-input';
 import { IntentPreview } from './components/intent-preview';
 import { ResponseDisplay } from './components/response-display';
+import { ResponseModal } from '@/components/ui/response-modal';
 
 // Import utilities
 import { routeIntentToHandler } from './utils/intent-router';
@@ -92,7 +94,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
 
   return (
     <div className="w-full">
-      <GlassmorphicCard className="p-6 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl h-full">
+      <GlassmorphicCard className="p-8 backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl min-h-fit">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-500/20 rounded-lg">
@@ -111,6 +113,15 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-yellow-400" />
             <span className="text-sm text-white/70">AI-Powered</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => actions.setShowModal(true)}
+              className="text-white/60 hover:text-white hover:bg-white/10 p-2 ml-2"
+              title="Open in dialog"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -157,6 +168,16 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
           </div>
         )}
       </GlassmorphicCard>
+      
+      {/* Response Modal */}
+      <ResponseModal
+        isOpen={state.showModal}
+        onClose={() => actions.setShowModal(false)}
+        response={state.response}
+        question={state.question}
+        isStreaming={state.loading && !state.response}
+        streamingContent={state.streamingContent}
+      />
     </div>
   );
 };

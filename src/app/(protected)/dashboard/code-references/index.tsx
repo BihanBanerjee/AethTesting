@@ -43,14 +43,14 @@ const CodeReferences: React.FC<FileReferenceProps> = ({ filesReferences, classNa
         <FileSummary groupedFiles={groupedFiles} />
       </div>
       
-      <Tabs value={tab} onValueChange={setTab} className="flex flex-col max-h-[60vh] overflow-hidden">
+      <Tabs value={tab} onValueChange={setTab} className="flex flex-col overflow-hidden">
         <FileTabs 
           files={enhancedFiles} 
           activeTab={tab} 
           onTabChange={setTab} 
         />
         
-        <div className="flex-1 overflow-hidden mt-2 min-h-0">
+        <div className="flex-1 overflow-y-auto mt-2 min-h-0">
           {enhancedFiles.map(file => (
             <FileViewer 
               key={file.fileName}

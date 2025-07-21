@@ -7,7 +7,7 @@ import { getIntentEmoji } from './shared-utilities';
 let ReactIcons: Record<string, React.ComponentType<{ className?: string }>> | null = null;
 try {
   // Dynamically import React icons only when needed
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   ReactIcons = require('lucide-react') as Record<string, React.ComponentType<{ className?: string }>>;
 } catch {
   // Icons not available in backend context
@@ -39,7 +39,7 @@ export const getIntentIcon = (intent?: string, className: string = "h-4 w-4"): s
   }
   
   // Return React component for frontend
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   const React = require('react') as typeof import('react');
   return React.createElement(IconComponent, { className });
 };

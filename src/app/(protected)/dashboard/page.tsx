@@ -6,12 +6,12 @@ import { ExternalLink, Github } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react'
 import CommitLog from './commit-log';
-import MeetingCard from './meeting-card';
 import ArchiveButton from './archive-button';
 import TeamMembers from './team-members';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import dynamic from 'next/dynamic';
 import ProjectQueue from './project-queue';
+import QuickActionsSidebar from './quick-actions-sidebar';
 
 // Import the updated enhanced ask question card
 import EnhancedAskQuestionCard from './ask-question-card';
@@ -51,10 +51,16 @@ const DashboardPage = () => {
       </div>
 
       <div className="mt-6">
-        <div className='grid grid-cols-1 gap-6 lg:grid-cols-2'>
-          {/* Use the enhanced ask question card with all integrations */}
-          <EnhancedAskQuestionCard />
-          <MeetingCard />
+        <div className='grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4'>
+          {/* Enhanced Ask Aetheria takes majority of the width */}
+          <div className="md:col-span-2 lg:col-span-3 order-1 md:order-1">
+            <EnhancedAskQuestionCard />
+          </div>
+          
+          {/* Quick Actions Sidebar - responsive positioning */}
+          <div className="md:col-span-1 lg:col-span-1 order-2 md:order-2">
+            <QuickActionsSidebar />
+          </div>
         </div>
       </div>
 

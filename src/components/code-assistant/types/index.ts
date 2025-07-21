@@ -1,9 +1,11 @@
+import type { StreamableValue } from 'ai/rsc';
+
 export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
 
 export interface Message {
   id: string;
   type: 'user' | 'assistant';
-  content: string;
+  content: string | StreamableValue<string>;
   intent?: IntentType;
   confidence?: number;
   metadata?: MessageMetadata;

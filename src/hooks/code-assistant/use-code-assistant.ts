@@ -60,19 +60,30 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
       // Step 2: Route to appropriate handler based on intent
       const response = await apiRouting.routeIntentToAPI(intent, messageState.input, project.id);
 
+      console.log('Raw API response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response answer:', (response as any).answer);
+      console.log('Response answer type:', typeof (response as any).answer);
+      
       processingState.setProgress(90);
       processingState.setProcessingStage('complete');
       processingState.setProgress(100);
 
+      const extractedContent = extractResponseContent(response);
+      console.log('Extracted content:', extractedContent);
+      console.log('Extracted content type:', typeof extractedContent);
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: extractResponseContent(response),
+        content: extractedContent,
         intent: intent.type,
         confidence: intent.confidence,
         metadata: extractResponseMetadata(response, intent),
         timestamp: new Date()
       };
+      
+      console.log('Assistant message being added:', assistantMessage);
 
       messageState.setMessages((prev: Message[]) => [...prev, assistantMessage]);
       setActiveTab('chat');

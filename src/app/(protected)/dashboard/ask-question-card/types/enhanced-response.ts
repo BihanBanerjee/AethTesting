@@ -49,6 +49,8 @@ export interface QuestionState {
   processingStage: ProcessingStage;
   selectedFiles: string[];
   availableFiles: string[];
+  showModal: boolean;
+  streamingContent: string;
 }
 
 export interface FileReference {

@@ -12,6 +12,8 @@ export function useQuestionState() {
   const [processingStage, setProcessingStage] = useState<ProcessingStage>('analyzing');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
 
   const resetState = () => {
     setQuestion('');
@@ -21,6 +23,8 @@ export function useQuestionState() {
     setIntentPreview(null);
     setProcessingStage('analyzing');
     setSelectedFiles([]);
+    setShowModal(false);
+    setStreamingContent('');
   };
 
   const state: QuestionState = {
@@ -33,6 +37,8 @@ export function useQuestionState() {
     processingStage,
     selectedFiles,
     availableFiles,
+    showModal,
+    streamingContent,
   };
 
   const actions = {
@@ -45,6 +51,8 @@ export function useQuestionState() {
     setProcessingStage,
     setSelectedFiles,
     setAvailableFiles,
+    setShowModal,
+    setStreamingContent,
     resetState,
   };
 

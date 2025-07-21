@@ -110,14 +110,39 @@ export const projectRouter = createTRPCRouter({
             return { intent };
         }
 
-        // For regular questions, use existing askQuestion logic
-        const { askQuestion } = await import('@/app/(protected)/dashboard/actions');
-        const result = await askQuestion(input.query, input.projectId);
+        // Instead of using the streaming askQuestion, let's use the AI directly
+        // to get a synchronous response
+        const { performVectorSearch } = await import('@/app/(protected)/dashboard/actions/database/vector-search');
+        const { buildIntentAwarePrompt } = await import('@/app/(protected)/dashboard/actions/prompts/prompt-builder');
+        const { google, MODEL_CONFIG } = await import('@/app/(protected)/dashboard/actions/config/ai-config');
+        const { getSearchConfig } = await import('@/app/(protected)/dashboard/actions/config/search-config');
+        
+        // Perform vector search
+        const searchConfig = getSearchConfig(intent.type);
+        const vectorResult = await performVectorSearch(input.query, input.projectId, searchConfig);
+        
+        // Build context string
+        let context = '';
+        for (const doc of vectorResult) {
+            context += `source: ${doc.fileName}\ncode content:${doc.sourceCode}\n summary of file: ${doc.summary}\n\n`;
+        }
+        
+        // Build intent-aware prompt
+        const systemPrompt = buildIntentAwarePrompt(intent.type, input.query, context);
+        
+        // Get AI response directly (non-streaming)
+        const { generateText } = await import('ai');
+        const response = await generateText({
+            model: google(MODEL_CONFIG.QUESTION_ANSWERING),
+            prompt: systemPrompt
+        });
+        
+        const finalAnswer = response.text || 'No response generated';
 
         return {
             intent,
-            answer: result.output,
-            filesReferences: result.filesReferences
+            answer: finalAnswer,
+            filesReferences: vectorResult
         };
     }),
 

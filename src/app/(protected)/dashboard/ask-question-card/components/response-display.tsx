@@ -8,7 +8,7 @@ import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
 import { DiffViewer } from '@/components/code/diff-viewer/index';
 import CodeReferences from '../../code-references';
 // import { EnhancedSaveButton } from '@/components/feedback/enhanced-save-button';
-import MDEditor from '@uiw/react-md-editor';
+import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import type { EnhancedResponse, ActiveTab } from '../types/enhanced-response';
 import { 
   Code, 
@@ -109,11 +109,8 @@ export const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
         </TabsList>
 
         <TabsContent value="response" className="space-y-4">
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10 max-h-96 overflow-y-auto">
-            <MDEditor.Markdown
-              source={response.content}
-              style={{ backgroundColor: 'transparent', color: 'white' }}
-            />
+          <div className="enhanced-response-area p-6 max-h-[600px] overflow-y-auto">
+            <DarkMarkdown content={response.content} />
           </div>
           
           {/* Metadata Display */}
@@ -172,11 +169,13 @@ export const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
           {response.filesReferences && response.filesReferences.length > 0 ? (
             <CodeReferences
               filesReferences={response.filesReferences}
-              className="max-h-96"
+              className=""
             />
           ) : (
-            <div className="text-center py-8 text-white/60">
-              No files referenced in this response
+            <div className="text-center py-12 text-white/60">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">No files referenced</p>
+              <p className="text-sm mt-2">This response doesn't include any specific file references</p>
             </div>
           )}
         </TabsContent>
