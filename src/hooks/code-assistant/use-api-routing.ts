@@ -1,9 +1,9 @@
 'use client'
 
 import { api } from '@/trpc/react';
-import { detectDetailLevel, detectImprovementType, detectReviewType, extractConstraints, extractFeatures } from '@/utils/use-code-assistant-utils';
+import { detectDetailLevel, detectImprovementType, detectReviewType, extractConstraints, extractFeatures } from '@/components/code-assistant/utils';
 import type { QueryIntent } from '@/lib/intent-classifier';
-import type { ProcessingStage } from '@/types/code-assistant';
+import type { ProcessingStage } from '@/components/code-assistant/types';
 import type { APIRoutingState } from '../types/use-code-assistant.types';
 
 export function useAPIRouting(

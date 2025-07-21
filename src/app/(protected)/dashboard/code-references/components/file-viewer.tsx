@@ -4,7 +4,7 @@
 import React from 'react';
 import { TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { getLanguageFromFileName } from '@/utils/code/language-utils';
+import { getLanguageFromFileName } from '@/components/code/utils/language-utils';
 import { CodeContent } from '@/components/code/code-viewer';
 import MDEditor from '@uiw/react-md-editor';
 import type { FileViewerProps } from '../types/file-reference';

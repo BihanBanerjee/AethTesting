@@ -9,7 +9,7 @@ import { useFileSelection } from './use-file-selection';
 import { useProcessingStates } from './use-processing-states';
 import { useAPIRouting } from './use-api-routing';
 import { extractResponseContent, extractResponseMetadata } from '../utils/response-processors';
-import type { ActiveTab, IntentType, Message } from '@/types/code-assistant';
+import type { ActiveTab, IntentType, Message } from '@/components/code-assistant/types';
 import type { CodeAssistantHookReturn } from '../types/use-code-assistant.types';
 
 export function useCodeAssistant(): CodeAssistantHookReturn {

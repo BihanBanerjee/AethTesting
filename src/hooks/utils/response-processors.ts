@@ -1,5 +1,5 @@
 import type { QueryIntent } from '@/lib/intent-classifier';
-import type { MessageMetadata, CodeSuggestion } from '@/types/code-assistant';
+import type { MessageMetadata, CodeSuggestion } from '@/components/code-assistant/types';
 
 // Define expected API response structure
 interface APIResponse {

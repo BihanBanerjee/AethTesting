@@ -5,7 +5,7 @@ import React from 'react';
 import { FileText, Code } from 'lucide-react';
 import MDEditor from '@uiw/react-md-editor';
 import CodeReferenceWrapper from '../code-reference/code-reference-wrapper';
-import { cleanSourceCode } from '../../../../../utils/code/language-utils';
+import { cleanSourceCode } from '@/components/code/utils/language-utils';
 import type { Question } from '../../types/question';
 import { getFileReferencesFromQuestion } from '../../types/question';
 

@@ -6,8 +6,8 @@
 import React, { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getLanguageFromFileName, cleanSourceCode } from '@/utils/code/language-utils';
-import { SyntaxHighlighter, customCodeStyle } from '@/utils/code/syntax-highlight-config';
+import { getLanguageFromFileName, cleanSourceCode } from '@/components/code/utils/language-utils';
+import { SyntaxHighlighter, customCodeStyle } from '@/components/code/utils/syntax-highlight-config';
 import MDEditor from '@uiw/react-md-editor';
 import { 
   FileText, 

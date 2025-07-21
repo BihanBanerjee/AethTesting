@@ -1,4 +1,4 @@
-import type { Message } from '@/types/code-assistant';
+import type { Message } from '@/components/code-assistant/types';
 
 export interface MessageDisplayProps {
   message: Message;

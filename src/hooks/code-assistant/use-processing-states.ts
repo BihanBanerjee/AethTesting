@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react';
-import type { ProcessingStage, IntentType } from '@/types/code-assistant';
+import type { ProcessingStage, IntentType } from '@/components/code-assistant/types';
 import type { ProcessingState } from '../types/use-code-assistant.types';
 
 export function useProcessingStates(): ProcessingState {

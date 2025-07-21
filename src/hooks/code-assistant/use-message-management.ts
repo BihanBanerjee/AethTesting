@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
-import type { Message } from '@/types/code-assistant';
+import type { Message } from '@/components/code-assistant/types';
 import type { MessageManagementState } from '../types/use-code-assistant.types';
 
 export function useMessageManagement(): MessageManagementState {

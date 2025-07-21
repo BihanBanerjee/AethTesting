@@ -1,5 +1,5 @@
 import type { QueryIntent } from '@/lib/intent-classifier';
-import type { Message, ProcessingStage, ActiveTab, IntentType } from '@/types/code-assistant';
+import type { Message, ProcessingStage, ActiveTab, IntentType } from '@/components/code-assistant/types';
 import type { Project } from '@prisma/client';
 
 export interface MessageManagementState {
