@@ -47,3 +47,7 @@ yarn-error.log*
 
 # inngest files
 /.inngest/
+
+# claude files
+CLAUDE.md
+CLAUDE.local.md
