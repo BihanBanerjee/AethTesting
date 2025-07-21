@@ -74,7 +74,7 @@ export interface Statistics {
 }
 
 // Type guard for Statistics
-export function isStatistics(value: any): value is Statistics {
+export function isStatistics(value: unknown): value is Statistics {
   return typeof value === 'object' && 
          value !== null && 
          'total' in value &&

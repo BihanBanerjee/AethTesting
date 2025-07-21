@@ -21,7 +21,7 @@ export class DebugStrategy implements GenerationStrategy {
       return this.responseParser.parseCodeGenerationResponse(response, context);
     } catch (error) {
       console.error('Code debugging failed:', error);
-      throw new Error(`Code debugging failed: ${error.message}`);
+      throw new Error(`Code debugging failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

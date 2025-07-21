@@ -16,7 +16,12 @@ import {
 export class ProjectContextAnalyzer {
   async getProjectContext(projectId: string, contextLevel: string, targetFiles?: string[]): Promise<ProjectContext> {
     // Get relevant embeddings based on context level
-    let relevantFiles: any[] = [];
+    let relevantFiles: Array<{
+      fileName: string;
+      sourceCode: string;
+      summary: string;
+      createdAt: Date;
+    }> = [];
     
     if (targetFiles && targetFiles.length > 0) {
       // Get specific files
@@ -39,7 +44,7 @@ export class ProjectContextAnalyzer {
     // Analyze project structure and patterns
     const techStack = inferTechStack(relevantFiles);
     const architecturePattern = inferArchitecturePattern(relevantFiles);
-    const codingStandards = inferCodingStandards(relevantFiles);
+    const codingStandards = inferCodingStandards();
     const projectStructure = buildProjectStructure(relevantFiles);
 
     return {

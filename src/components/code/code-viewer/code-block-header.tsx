@@ -73,7 +73,7 @@ export const CodeBlockHeader: React.FC<CodeBlockHeaderProps> = ({
           </Badge>
         )}
         
-        {suggestions.length > 0 && (
+        {suggestions.length > 0 && showSuggestions && (
           <Badge 
             variant="outline" 
             className="text-xs border-blue-500/30 text-blue-300 cursor-pointer hover:bg-blue-500/10"
@@ -85,7 +85,7 @@ export const CodeBlockHeader: React.FC<CodeBlockHeaderProps> = ({
       </div>
       
       <div className="flex items-center gap-1">
-        {suggestions.length > 0 && (
+        {suggestions.length > 0 && showSuggestions && (
           <Button
             variant="ghost"
             size="sm"

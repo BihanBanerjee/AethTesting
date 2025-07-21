@@ -1,6 +1,11 @@
-import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { type PrismaClient } from "@prisma/client";
+
+interface QueryResult {
+  fileName: string;
+  sourceCode: string;
+  summary: string;
+  similarity: number;
+}
 
 type ServiceContext = {
   db: PrismaClient;
@@ -239,7 +244,7 @@ export const aiCodeService = {
         AND "projectId" = ${input.projectId}
         ORDER BY similarity DESC
         LIMIT 5
-      ` as any[];
+      ` as QueryResult[];
 
       codeContext = relevantFiles.map(f => `
         File: ${f.fileName}
@@ -390,7 +395,7 @@ export const aiCodeService = {
         AND "projectId" = ${input.projectId}
         ORDER BY similarity DESC
         LIMIT 3
-      ` as any[];
+      ` as QueryResult[];
 
       codeToExplain = relevantFiles.map(f => `
         File: ${f.fileName}

@@ -14,6 +14,7 @@ import AnalyticsDashboard from './components/analytics-dashboard/analytics-dashb
 import DeleteConfirmationDialog from './components/delete-confirmation-dialog/delete-confirmation-dialog';
 import QuestionDetail from './components/question-detail/question-detail';
 import ScrollbarStyles from './components/scrollbar-styles';
+import type { Question } from './types/question';
 
 const EnhancedQAPage: React.FC = () => {
   const { projectId } = useProject();
@@ -53,7 +54,7 @@ const EnhancedQAPage: React.FC = () => {
     }
   });
 
-  const questions = questionsData?.questions || [];
+  const questions = (questionsData?.questions || []) as Question[];
   const selectedQuestion = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : null;
 
   const openQuestion = (index: number) => {

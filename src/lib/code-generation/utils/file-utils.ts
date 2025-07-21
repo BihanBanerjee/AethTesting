@@ -45,20 +45,30 @@ export function extractImports(sourceCode: string): string[] {
   }
 }
 
-export function buildProjectStructure(files: any[]): string {
-  const structure: any = {};
+interface FileInfo {
+  fileName: string;
+}
+
+type StructureNode = {
+  [key: string]: StructureNode;
+} & {
+  _files?: string[];
+};
+
+export function buildProjectStructure(files: FileInfo[]): string {
+  const structure: StructureNode = {};
   
   files.forEach(file => {
     const parts = file.fileName.split('/');
     let current = structure;
     
-    parts.forEach((part, index) => {
+    parts.forEach((part: string, index: number) => {
       if (index === parts.length - 1) {
         if (!current._files) current._files = [];
         current._files.push(part);
       } else {
         if (!current[part]) current[part] = {};
-        current = current[part];
+        current = current[part] as StructureNode;
       }
     });
   });
@@ -66,18 +76,24 @@ export function buildProjectStructure(files: any[]): string {
   return formatStructure(structure);
 }
 
-function formatStructure(obj: any, indent = 0): string {
+function formatStructure(obj: StructureNode, indent = 0): string {
   let result = '';
   const spaces = '  '.repeat(indent);
   
   Object.keys(obj).forEach(key => {
     if (key === '_files') {
-      obj[key].forEach((file: string) => {
-        result += `${spaces}${file}\n`;
-      });
+      const files = obj[key];
+      if (files) {
+        files.forEach((file: string) => {
+          result += `${spaces}${file}\n`;
+        });
+      }
     } else {
       result += `${spaces}${key}/\n`;
-      result += formatStructure(obj[key], indent + 1);
+      const subNode = obj[key] as StructureNode;
+      if (subNode) {
+        result += formatStructure(subNode, indent + 1);
+      }
     }
   });
   

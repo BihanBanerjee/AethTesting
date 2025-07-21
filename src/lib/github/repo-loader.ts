@@ -32,6 +32,7 @@ export class RepoLoader {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setIgnoreFiles(ignoreFiles: string[]): void {
     // This could be used to customize ignore patterns per project
   }

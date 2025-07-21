@@ -38,7 +38,7 @@ export interface ProjectContext {
   }>;
   techStack: string[];
   architecturePattern: string;
-  codingStandards: any;
+  codingStandards: CodingStandards;
   projectStructure: string;
 }
 

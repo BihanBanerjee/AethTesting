@@ -43,7 +43,7 @@ export function useSaveHandler(
           const analyticsMsg = [
             result.analytics.aiInteractionCreated && 'AI interaction tracked',
             result.analytics.codeGenerationCreated && 'Code generation recorded',
-            result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
+            result.analytics.fileAnalyticsUpdated && result.analytics.fileAnalyticsUpdated > 0 && `${result.analytics.fileAnalyticsUpdated} files analyzed`,
             result.analytics.suggestionFeedbackCreated && 'Feedback recorded'
           ].filter(Boolean).join(', ');
           

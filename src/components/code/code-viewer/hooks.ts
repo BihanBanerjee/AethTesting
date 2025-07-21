@@ -14,7 +14,7 @@ export const useCodeActions = (code: string, language: string, filename?: string
       setCopied(true);
       toast.success('Code copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy code');
     }
   };
@@ -39,7 +39,7 @@ export const useCodeActions = (code: string, language: string, filename?: string
     try {
       await onApply();
       toast.success('Code changes applied successfully');
-    } catch (error) {
+    } catch {
       toast.error('Failed to apply changes');
     } finally {
       setIsApplying(false);

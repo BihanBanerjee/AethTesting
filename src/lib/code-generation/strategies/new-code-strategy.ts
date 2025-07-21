@@ -21,7 +21,7 @@ export class NewCodeStrategy implements GenerationStrategy {
       return this.responseParser.parseCodeGenerationResponse(response, context);
     } catch (error) {
       console.error('Code generation failed:', error);
-      throw new Error(`Code generation failed: ${error.message}`);
+      throw new Error(`Code generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -1,5 +1,14 @@
 // src/lib/code-generation/response-parser.ts
 import type { CodeGenerationResult, GeneratedFile, ProjectContext } from "./types";
+
+interface ParsedFile {
+  path: string;
+  content: string;
+  language?: string;
+  changeType?: string;
+  diff?: string;
+  insertionPoint?: number;
+}
 import { extractJSON, lightCleanJSON, cleanCodeContent } from "./utils/code-utils";
 import { detectLanguage } from "./utils/language-utils";
 
@@ -21,6 +30,7 @@ export class ResponseParser {
       let parsed;
       try {
         parsed = JSON.parse(jsonStr);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (firstError) {
         console.log('❌ First parse failed, trying light cleaning...');
         
@@ -30,6 +40,7 @@ export class ResponseParser {
         
         try {
           parsed = JSON.parse(jsonStr);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (secondError) {
           console.log('❌ Second parse failed, trying content extraction...');
           
@@ -44,7 +55,7 @@ export class ResponseParser {
       }
 
       // Process each file and clean any remaining issues
-      const processedFiles: GeneratedFile[] = parsed.files.map((file: any) => ({
+      const processedFiles: GeneratedFile[] = parsed.files.map((file: ParsedFile) => ({
         path: file.path,
         content: cleanCodeContent(file.content),
         language: file.language || detectLanguage(file.path),
@@ -159,7 +170,19 @@ export class ResponseParser {
       return extracted;
     }
     
-    // Otherwise, create a helpful error response
+    // Otherwise, create a helpful error response with context-aware suggestions
+    const techStackSuggestions = context.techStack.length > 0 
+      ? `\n## Your project uses:
+${context.techStack.map(tech => `- ${tech}`).join('\n')}
+
+Consider asking for code specific to these technologies.`
+      : '';
+
+    const architectureSuggestion = context.architecturePattern 
+      ? `\n## Your project follows ${context.architecturePattern} architecture
+Try asking for code that follows this pattern.`
+      : '';
+
     return {
       type: 'code_snippet',
       files: [{
@@ -176,7 +199,7 @@ The AI generated a response, but it couldn't be parsed properly.
 ## What you can do:
 1. Try rephrasing your request more specifically
 2. Ask for simpler code generation tasks
-3. Specify the exact file type and structure you want
+3. Specify the exact file type and structure you want${techStackSuggestions}${architectureSuggestion}
 
 ## Partial AI Response:
 \`\`\`

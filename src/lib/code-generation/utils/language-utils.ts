@@ -1,5 +1,18 @@
 // src/lib/code-generation/utils/language-utils.ts
 
+interface FileData {
+  fileName: string;
+  sourceCode: string | object;
+}
+
+interface CodingStandards {
+  indentation: string;
+  quotes: string;
+  semicolons: boolean;
+  trailingCommas: boolean;
+  maxLineLength: number;
+}
+
 export function detectLanguage(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase();
   const langMap: Record<string, string> = {
@@ -14,7 +27,7 @@ export function detectLanguage(fileName: string): string {
   return langMap[ext || ''] || 'text';
 }
 
-export function inferTechStack(files: any[]): string[] {
+export function inferTechStack(files: FileData[]): string[] {
   const stack = new Set<string>();
   
   files.forEach(file => {
@@ -56,7 +69,7 @@ export function inferTechStack(files: any[]): string[] {
   return Array.from(stack);
 }
 
-export function inferArchitecturePattern(files: any[]): string {
+export function inferArchitecturePattern(files: FileData[]): string {
   const patterns = {
     mvc: 0,
     layered: 0,
@@ -92,7 +105,7 @@ export function inferArchitecturePattern(files: any[]): string {
   return dominantPattern[0];
 }
 
-export function inferCodingStandards(files: any[]): any {
+export function inferCodingStandards(): CodingStandards {
   return {
     indentation: '2 spaces',
     quotes: 'single',

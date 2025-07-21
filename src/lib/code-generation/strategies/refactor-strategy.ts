@@ -21,7 +21,7 @@ export class RefactorStrategy implements GenerationStrategy {
       return this.responseParser.parseCodeGenerationResponse(response, context);
     } catch (error) {
       console.error('Code refactoring failed:', error);
-      throw new Error(`Code refactoring failed: ${error.message}`);
+      throw new Error(`Code refactoring failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -29,7 +29,7 @@ export class ImprovementStrategy implements GenerationStrategy {
       return this.responseParser.parseCodeGenerationResponse(response, context);
     } catch (error) {
       console.error('Code improvement failed:', error);
-      throw new Error(`Code improvement failed: ${error.message}`);
+      throw new Error(`Code improvement failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     console.error('❌ Error processing GitHub webhook:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
-      message: error.message 
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
     }, { status: 500 });
   }
 }
