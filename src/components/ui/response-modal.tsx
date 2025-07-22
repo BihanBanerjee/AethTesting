@@ -93,6 +93,7 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
   isStreaming = false,
   streamingContent = ''
 }) => {
+  // Modal is rendered inside MainContent which already handles sidebar positioning
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -138,16 +139,14 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-2"
+          className="fixed inset-0 z-50 overflow-hidden"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ 
               scale: 1, 
-              opacity: 1,
-              width: 'calc(100vw - 1rem)',
-              height: 'calc(100vh - 1rem)'
+              opacity: 1
             }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
