@@ -146,6 +146,35 @@ export const projectRouter = createTRPCRouter({
         };
     }),
 
+    // Dedicated Intent Classification Endpoint
+    classifyIntent: protectedProcedure.input(
+        z.object({
+            projectId: z.string(),
+            query: z.string(),
+            contextFiles: z.array(z.string()).optional(),
+        })
+    ).mutation(async ({ ctx, input }) => {
+        const { IntentClassifier } = await import('@/lib/intent-classifier');
+        const classifier = new IntentClassifier();
+
+        // Get project context for better classification
+        const projectContext = await ctx.db.sourceCodeEmbedding.findMany({
+            where: { projectId: input.projectId },
+            select: { fileName: true },
+            take: 100
+        });
+
+        const availableFiles = projectContext.map(f => f.fileName);
+
+        // Classify the intent
+        const intent = await classifier.classifyQuery(input.query, {
+            availableFiles,
+            targetFiles: input.contextFiles || []
+        });
+
+        return { intent };
+    }),
+
     // Code Generation with Intent
     generateCode: protectedProcedure.input(
         z.object({

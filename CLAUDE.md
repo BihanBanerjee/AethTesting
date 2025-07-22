@@ -72,6 +72,7 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - `src/app/(protected)/qa/` - Q&A interface for saved questions
 - `src/app/(protected)/meetings/` - Meeting management and summaries
 - `src/components/` - Reusable UI components organized by feature
+- `src/components/ui/` - Core UI components including custom dark-themed components
 
 ### Key Features Implementation
 - **Vector Search**: Embeddings stored in PostgreSQL with vector extension
@@ -79,6 +80,19 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - **Meeting Summaries**: Audio transcription and AI analysis of discussions
 - **Credit System**: File indexing costs 1 credit per file, questions are free after indexing
 - **Real-time Updates**: Project status tracking with detailed processing logs
+
+### Dashboard Architecture
+- **Layout Structure**: 75/25 split with Ask Aetheria taking primary space (75%) and Quick Actions sidebar (25%)
+- **Progressive Disclosure**: Files tab shows summaries first with expandable original code sections
+- **Response Components**: Tabbed interface (Response, Code, Files) with enhanced readability
+- **Modal System**: Full-screen modals for detailed code viewing without height restrictions
+
+### UI Component System
+- **Glassmorphic Design**: Custom `.glassmorphism` class with backdrop-filter effects throughout interface
+- **Dark Code Blocks**: `DarkCodeBlock` component using react-syntax-highlighter with atomDark theme
+- **Custom Markdown**: `DarkMarkdown` component for rendering AI responses with proper dark theme
+- **Response Modal**: Streaming dialog with typewriter effects and professional code highlighting
+- **File Viewer**: Progressive disclosure pattern showing summaries with expandable syntax-highlighted code
 
 ## Development Guidelines
 

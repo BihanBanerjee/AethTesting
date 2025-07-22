@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 
 export interface ProjectContext {
-  availableFiles: string[];
-  techStack: string[];
-  recentQueries: string[];
+  projectId?: string;
+  availableFiles?: string[];
+  techStack?: string[];
+  recentQueries?: string[];
+  [key: string]: unknown;
 }
 
 export interface SmartInputSuggestionsProps {

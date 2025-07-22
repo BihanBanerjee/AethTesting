@@ -9,12 +9,16 @@ import { useFileSelection } from './use-file-selection';
 import { useProcessingStates } from './use-processing-states';
 import { useAPIRouting } from './use-api-routing';
 import { extractResponseContent, extractResponseMetadata } from '../utils/response-processors';
+import { api } from '@/trpc/react';
 import type { ActiveTab, IntentType, Message } from '@/components/code-assistant/types';
 import type { CodeAssistantHookReturn } from '../types/use-code-assistant.types';
 
 export function useCodeAssistant(): CodeAssistantHookReturn {
   const { project } = useProject();
-  const { classifyQuery, isReady } = useIntentClassifier();
+  const { classifyQuery: clientClassifyQuery, isReady } = useIntentClassifier();
+  
+  // Server-side classification
+  const serverClassifyMutation = api.project.classifyIntent.useMutation();
   
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
   
@@ -46,10 +50,17 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
       processingState.setProcessingStage('analyzing');
       processingState.setProgress(10);
       
-      const intent = await classifyQuery(messageState.input, { 
-        availableFiles: fileState.availableFiles,
-        selectedFiles: fileState.selectedFiles 
-      });
+      // Use server-side classification when project is available
+      const intent = project?.id 
+        ? (await serverClassifyMutation.mutateAsync({
+            projectId: project.id,
+            query: messageState.input,
+            contextFiles: fileState.availableFiles
+          })).intent
+        : await clientClassifyQuery(messageState.input, { 
+            availableFiles: fileState.availableFiles,
+            selectedFiles: fileState.selectedFiles 
+          });
       
       processingState.setCurrentIntent(intent.type as IntentType);
       processingState.setProgress(30);
@@ -153,6 +164,7 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
     // Project context
     project,
     projectContext: {
+      projectId: project?.id,
       availableFiles: fileState.availableFiles,
       techStack: ['React', 'TypeScript', 'Next.js'],
       recentQueries: []

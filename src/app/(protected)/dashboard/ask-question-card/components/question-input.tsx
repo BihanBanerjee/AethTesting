@@ -4,8 +4,18 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, MessageSquare } from 'lucide-react';
-// import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
+import { Loader2, MessageSquare, Code, FileText, Lightbulb, Zap, Bug, Search, Wrench, CheckCircle } from 'lucide-react';
+import { SmartInputSuggestions } from '@/components/code-assistant/smart-input-suggestion';
+
+const intentIcons = {
+  question: FileText,
+  code_generation: Code,
+  code_improvement: Zap,
+  code_review: Search,
+  refactor: Wrench,
+  debug: Bug,
+  explain: Lightbulb,
+};
 
 interface QuestionInputProps {
   question: string;
@@ -16,6 +26,9 @@ interface QuestionInputProps {
   availableFiles?: string[];
   selectedFiles?: string[];
   onFileSelect?: (files: string[]) => void;
+  intentPreview?: any;
+  processingStage?: 'analyzing' | 'processing' | 'generating' | 'complete';
+  projectId?: string;
 }
 
 export const QuestionInput: React.FC<QuestionInputProps> = ({
@@ -26,8 +39,21 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
   disabled = false,
   availableFiles = [],
   selectedFiles = [],
-  onFileSelect
+  onFileSelect,
+  intentPreview,
+  processingStage,
+  projectId
 }) => {
+  const formatIntent = (type: string) => {
+    return type?.replace('_', ' ') || 'question';
+  };
+
+  const getStatusIcon = () => {
+    if (loading) {
+      return <Loader2 className="h-3 w-3 animate-spin text-yellow-400" />;
+    }
+    return <CheckCircle className="h-3 w-3 text-green-400" />;
+  };
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -36,11 +62,47 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
             placeholder="Ask a question about your codebase..."
             value={question}
             onChange={(e) => onQuestionChange(e.target.value)}
-            className="w-full min-h-[120px] bg-white/10 border-white/20 text-white placeholder-white/50 focus:border-indigo-500 focus:ring-indigo-500/20 resize-none"
+            className="w-full min-h-[120px] bg-white/10 border-white/20 text-white focus:border-indigo-500 focus:ring-indigo-500/20 resize-none pr-40"
+            style={{
+              color: '#ffffff'
+            }}
             disabled={disabled}
           />
-          {/* Smart input suggestions temporarily disabled due to prop interface mismatch */}
+          <style jsx>{`
+            textarea::placeholder {
+              color: #dbeafe !important;
+              opacity: 1 !important;
+              font-weight: 400;
+            }
+          `}</style>
+          
+          {/* Intent Badge - Floating in top-right corner of input */}
+          {intentPreview && question.trim() && (
+            <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs border border-white/20">
+              {React.createElement(intentIcons[intentPreview.type as keyof typeof intentIcons] || FileText, {
+                className: "h-3 w-3 text-blue-300"
+              })}
+              <span className="text-white/80 font-medium">
+                {formatIntent(intentPreview.type)}
+              </span>
+              <span className="text-white/60">
+                ({Math.round((intentPreview.confidence || 0) * 100)}%)
+              </span>
+              {getStatusIcon()}
+            </div>
+          )}
         </div>
+        
+        <SmartInputSuggestions
+          currentInput={question}
+          onSuggestionSelect={onQuestionChange}
+          projectContext={{
+            projectId: projectId,
+            availableFiles: availableFiles,
+            techStack: ['React', 'TypeScript', 'Next.js'],
+            recentQueries: []
+          }}
+        />
       </div>
       
       <div className="flex justify-end">

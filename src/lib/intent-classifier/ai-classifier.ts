@@ -5,17 +5,25 @@ export class AIClassifier {
   private model: GenerativeModel | null = null;
 
   constructor() {
-    if (process.env.GEMINI_API_KEY) {
+    // Don't access environment variables in constructor to avoid client-side errors
+    // Model will be initialized when needed
+  }
+
+  isAvailable(): boolean {
+    // Only check environment variables server-side
+    return typeof window === 'undefined' && Boolean(process.env.GEMINI_API_KEY);
+  }
+  
+  private initializeModel(): void {
+    if (!this.model && typeof window === 'undefined' && process.env.GEMINI_API_KEY) {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       this.model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     }
   }
 
-  isAvailable(): boolean {
-    return Boolean(process.env.GEMINI_API_KEY && this.model);
-  }
-
   async classifyQuery(query: string, context?: ClassificationContext): Promise<QueryIntent> {
+    this.initializeModel();
+    
     if (!this.isAvailable() || !this.model) {
       throw new Error('Gemini API key not configured');
     }

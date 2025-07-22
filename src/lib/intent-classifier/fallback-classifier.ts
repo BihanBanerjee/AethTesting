@@ -11,14 +11,19 @@ export class FallbackClassifier {
   classifyQuery(query: string, availableFiles: string[] = []): QueryIntent {
     const lowerQuery = query.toLowerCase();
     
-    console.log('🔄 Using fallback intent classification for:', query.substring(0, 50) + '...');
+    // Only log on server-side, be quiet on client-side for input suggestions
+    if (typeof window === 'undefined') {
+      console.log('🔄 Using fallback intent classification for:', query.substring(0, 50) + '...');
+    }
     
     // Code generation patterns
     if (this.matchesPatterns(lowerQuery, [
       'create', 'generate', 'write', 'build', 'implement', 'add new',
       'make a', 'develop', 'code for', 'function that', 'component that'
     ])) {
-      console.log('✅ Classified as: code_generation (fallback)');
+      if (typeof window === 'undefined') {
+        console.log('✅ Classified as: code_generation (fallback)');
+      }
       return {
         type: 'code_generation',
         confidence: 0.7,
@@ -34,7 +39,9 @@ export class FallbackClassifier {
       'improve', 'optimize', 'enhance', 'better', 'performance',
       'make faster', 'more efficient', 'cleaner', 'simplify'
     ])) {
-      console.log('✅ Classified as: code_improvement (fallback)');
+      if (typeof window === 'undefined') {
+        console.log('✅ Classified as: code_improvement (fallback)');
+      }
       return {
         type: 'code_improvement',
         confidence: 0.7,
@@ -110,7 +117,9 @@ export class FallbackClassifier {
     }
 
     // Default to question
-    console.log('✅ Classified as: question (fallback default)');
+    if (typeof window === 'undefined') {
+      console.log('✅ Classified as: question (fallback default)');
+    }
     return {
       type: 'question',
       confidence: 0.5,

@@ -13,7 +13,6 @@ interface DarkCodeBlockProps {
   language?: string;
   filename?: string;
   showLineNumbers?: boolean;
-  maxHeight?: string;
   className?: string;
 }
 
@@ -22,11 +21,9 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
   language = 'javascript',
   filename,
   showLineNumbers = true,
-  maxHeight = '400px',
   className = ''
 }) => {
   const [copied, setCopied] = React.useState(false);
-  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const copyToClipboard = async () => {
     try {
@@ -99,8 +96,6 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
     },
   };
 
-  const codeHeight = isExpanded ? 'auto' : maxHeight;
-  const hasMaxHeight = maxHeight !== undefined;
 
   return (
     <div className={`relative group ${className}`}>
@@ -150,13 +145,7 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
       )}
 
       {/* Code Block */}
-      <div 
-        className={`relative rounded-b-lg ${hasMaxHeight ? 'overflow-hidden' : ''}`}
-        style={hasMaxHeight ? { 
-          maxHeight: codeHeight,
-          transition: 'max-height 0.3s ease-in-out'
-        } : {}}
-      >
+      <div className="relative rounded-b-lg">
         <SyntaxHighlighter
           language={language}
           style={customDarkTheme}
@@ -185,32 +174,6 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
           {code}
         </SyntaxHighlighter>
 
-        {/* Expand/Collapse overlay for long code - only when maxHeight is set */}
-        {hasMaxHeight && code.split('\n').length > 15 && !isExpanded && (
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(true)}
-              className="text-white/80 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm"
-            >
-              Show More
-            </Button>
-          </div>
-        )}
-        
-        {hasMaxHeight && isExpanded && code.split('\n').length > 15 && (
-          <div className="absolute top-2 right-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(false)}
-              className="text-white/60 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm"
-            >
-              Show Less
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* Copy success feedback */}

@@ -17,7 +17,10 @@ export class IntentClassifier {
   async classifyQuery(query: string, projectContext?: unknown): Promise<QueryIntent> {
     // Check if AI classification is available
     if (!this.aiClassifier.isAvailable()) {
-      console.warn('Gemini API key not configured, using fallback classification');
+      // Only warn on server-side, be quiet on client-side
+      if (typeof window === 'undefined') {
+        console.warn('Gemini API key not configured, using fallback classification');
+      }
       return this.fallbackClassifier.classifyQuery(query);
     }
 

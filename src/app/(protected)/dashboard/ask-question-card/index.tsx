@@ -16,7 +16,6 @@ import { useIntentHandling } from './hooks/use-intent-handling';
 
 // Import components
 import { QuestionInput } from './components/question-input';
-import { IntentPreview } from './components/intent-preview';
 import { ResponseDisplay } from './components/response-display';
 import { ResponseModal } from '@/components/ui/response-modal';
 
@@ -134,12 +133,9 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
           availableFiles={state.availableFiles}
           selectedFiles={state.selectedFiles}
           onFileSelect={actions.setSelectedFiles}
-        />
-
-        <IntentPreview
           intentPreview={state.intentPreview}
           processingStage={state.processingStage}
-          loading={state.loading}
+          projectId={project?.id}
         />
 
         {/* Context aware file selector temporarily disabled due to prop interface mismatch */}
@@ -175,6 +171,9 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
         onClose={() => actions.setShowModal(false)}
         response={state.response}
         question={state.question}
+        activeTab={state.activeTab}
+        onTabChange={actions.setActiveTab}
+        projectId={project?.id || ''}
         isStreaming={state.loading && !state.response}
         streamingContent={state.streamingContent}
       />

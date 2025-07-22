@@ -33,9 +33,11 @@ export interface APIRoutingState {
 }
 
 export interface ProjectContextData {
+  projectId?: string;
   availableFiles: string[];
   techStack: string[];
   recentQueries: string[];
+  [key: string]: unknown;
 }
 
 export interface CodeAssistantHookReturn {
