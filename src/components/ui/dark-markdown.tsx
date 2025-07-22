@@ -17,7 +17,7 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
   className = '' 
 }) => {
   return (
-    <div className={`prose prose-invert prose-lg max-w-none ${className}`}>
+    <div className={`prose prose-invert prose-lg max-w-full break-words overflow-wrap-anywhere ${className}`}>
       <ReactMarkdown
         components={{
           // Custom code block renderer
@@ -67,7 +67,7 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
           
           // Custom paragraph styles
           p: ({ children }) => (
-            <p className="text-white/90 mb-4 leading-relaxed">
+            <p className="text-white/90 mb-4 leading-relaxed break-words overflow-wrap-anywhere">
               {children}
             </p>
           ),
@@ -101,8 +101,8 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
           
           // Custom table styles
           table: ({ children }) => (
-            <div className="overflow-x-auto my-4">
-              <table className="w-full border-collapse border border-white/20 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto my-4 max-w-full">
+              <table className="min-w-full border-collapse border border-white/20 rounded-lg overflow-hidden">
                 {children}
               </table>
             </div>
@@ -113,12 +113,12 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
             </thead>
           ),
           th: ({ children }) => (
-            <th className="border border-white/20 px-3 py-2 text-left text-white font-semibold">
+            <th className="border border-white/20 px-3 py-2 text-left text-white font-semibold break-words">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="border border-white/20 px-3 py-2 text-white/90">
+            <td className="border border-white/20 px-3 py-2 text-white/90 break-words overflow-wrap-anywhere">
               {children}
             </td>
           ),

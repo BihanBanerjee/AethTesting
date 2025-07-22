@@ -30,7 +30,7 @@ const CodeReferences: React.FC<FileReferenceProps> = ({ filesReferences, classNa
   
   return (
     <motion.div 
-      className={cn('w-full glassmorphism border border-white/20 p-4 flex flex-col', className)}
+      className={cn('w-full max-w-full glassmorphism border border-white/20 p-4 flex flex-col overflow-hidden', className)}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}

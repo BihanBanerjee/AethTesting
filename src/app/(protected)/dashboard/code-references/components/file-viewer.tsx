@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DarkCodeBlock } from '@/components/ui/dark-code-block';
 import MDEditor from '@uiw/react-md-editor';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { ChevronDown, ChevronUp, Code, FileText, Maximize2, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code, FileText } from 'lucide-react';
 import type { FileViewerProps } from '../types/file-reference';
 import { getFileTypeIcon, getFileTypeIconProps } from '../config/file-icons';
 import { getFileTypeLabel, getFileTypeColor } from '../utils/file-type-detector';
@@ -18,7 +16,6 @@ import { FileActions } from './file-actions';
 
 export const FileViewer: React.FC<FileViewerProps> = ({ file }) => {
   const [showOriginalCode, setShowOriginalCode] = useState(false);
-  const [showFullScreen, setShowFullScreen] = useState(false);
   const IconComponent = getFileTypeIcon(file.fileType);
   const iconProps = getFileTypeIconProps(file.fileType);
 
@@ -91,7 +88,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({ file }) => {
     <TabsContent 
       key={file.fileName} 
       value={file.fileName} 
-      className='w-full h-full border border-white/10 rounded-md overflow-hidden flex flex-col'
+      className='w-full max-w-full h-full border border-white/10 rounded-md overflow-hidden flex flex-col'
     >
       {/* Enhanced header */}
       <div className="p-3 bg-indigo-800/40 border-b border-indigo-500/20 text-white rounded-t-md flex justify-between items-center flex-shrink-0">
@@ -112,8 +109,8 @@ export const FileViewer: React.FC<FileViewerProps> = ({ file }) => {
       </div>
       
       {/* Content area with progressive disclosure */}
-      <div className="flex-1 overflow-y-auto bg-indigo-900/20 min-h-0">
-        <div className="p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto bg-indigo-900/20 min-h-0 max-w-full">
+        <div className="p-4 space-y-4 w-full max-w-full break-words overflow-wrap-anywhere">
           {/* Summary Section - Always Visible */}
           {file.summary && (
             <div className="space-y-3">
@@ -139,17 +136,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({ file }) => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFullScreen(true)}
-                    className="text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-2 h-8"
-                    title="View in full screen"
-                  >
-                    <Maximize2 className="h-3 w-3" />
-                    Full Screen
-                  </Button>
-                  
                   <Button
                     variant="ghost"
                     size="sm"
@@ -236,93 +222,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({ file }) => {
           )}
         </div>
       </div>
-      
-      {/* Full Screen Modal */}
-      <AnimatePresence>
-        {showFullScreen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm"
-            onClick={() => setShowFullScreen(false)}
-          >
-            <div 
-              className="h-full flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 bg-black/40 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <IconComponent {...iconProps} />
-                  <h2 className="text-xl font-semibold text-white">{file.fileName}</h2>
-                  <Badge className={`${getFileTypeColor(file.fileType)}`}>
-                    {getFileTypeLabel(file.fileType)}
-                  </Badge>
-                </div>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFullScreen(false)}
-                  className="text-white/70 hover:text-white hover:bg-white/10"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              
-              {/* Modal Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-full">
-                  {file.fileName.endsWith('.md') ? (
-                    <div className="bg-black/20 border border-white/10 rounded-lg p-6 backdrop-blur-sm">
-                      <MDEditor.Markdown 
-                        source={preprocessCode(file.sourceCode)}
-                        style={{ 
-                          backgroundColor: 'transparent',
-                          color: 'white'
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="bg-black/40 border border-white/10 rounded-lg backdrop-blur-sm overflow-hidden">
-                      <SyntaxHighlighter
-                        language={detectLanguageFromFileName(file.fileName)}
-                        style={atomDark}
-                        showLineNumbers={true}
-                        customStyle={{
-                          margin: 0,
-                          padding: '1.5rem',
-                          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          lineHeight: '1.6',
-                        }}
-                        codeTagProps={{
-                          style: {
-                            fontSize: '14px',
-                            fontFamily: '"Fira Code", "SF Mono", Monaco, Inconsolata, "Roboto Mono", "Source Code Pro", monospace',
-                            lineHeight: '1.6',
-                          }
-                        }}
-                        lineNumberStyle={{
-                          color: 'rgba(255, 255, 255, 0.3)',
-                          paddingRight: '1rem',
-                          fontSize: '12px',
-                          minWidth: '3em',
-                        }}
-                      >
-                        {preprocessCode(file.sourceCode)}
-                      </SyntaxHighlighter>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </TabsContent>
   );
 };

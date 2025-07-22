@@ -5,24 +5,35 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Minimize2,
-  Maximize2,
   Copy,
   Download,
   MessageSquare,
   Sparkles,
-  Loader2
+  Loader2,
+  Code,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  InfoIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import { DarkMarkdown } from '@/components/ui/dark-markdown';
-import type { EnhancedResponse } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
+import { DiffViewer } from '@/components/code/diff-viewer/index';
+import CodeReferences from '@/app/(protected)/dashboard/code-references';
+import type { EnhancedResponse, ActiveTab } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 
 interface ResponseModalProps {
   isOpen: boolean;
   onClose: () => void;
   response: EnhancedResponse | null;
   question: string;
+  activeTab: ActiveTab;
+  onTabChange: (tab: ActiveTab) => void;
+  projectId: string;
   isStreaming?: boolean;
   streamingContent?: string;
 }
@@ -76,11 +87,12 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
   onClose,
   response,
   question,
+  activeTab,
+  onTabChange,
+  projectId,
   isStreaming = false,
   streamingContent = ''
 }) => {
-  const [isMinimized, setIsMinimized] = React.useState(false);
-  const [isMaximized, setIsMaximized] = React.useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -96,6 +108,26 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const getResponseTypeIcon = () => {
+    if (!response?.type) return <MessageSquare className="h-4 w-4" />;
+    switch (response.type) {
+      case 'code': return <Code className="h-4 w-4" />;
+      case 'review': return <CheckCircle className="h-4 w-4" />;
+      case 'debug': return <AlertCircle className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getResponseTypeColor = () => {
+    if (!response?.type) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    switch (response.type) {
+      case 'code': return 'bg-green-500/20 text-green-300 border-green-500/30';
+      case 'review': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+      case 'debug': return 'bg-red-500/20 text-red-300 border-red-500/30';
+      default: return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    }
+  };
+
   const modalContent = response?.content || streamingContent;
   const isContentReady = response !== null || streamingContent.length > 0;
 
@@ -106,22 +138,22 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-2"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ 
-              scale: isMaximized ? 1 : 0.95, 
+              scale: 1, 
               opacity: 1,
-              width: isMaximized ? '95vw' : '90vw',
-              height: isMaximized ? '95vh' : isMinimized ? '120px' : '80vh'
+              width: 'calc(100vw - 1rem)',
+              height: 'calc(100vh - 1rem)'
             }}
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative max-w-6xl w-full"
+            className="relative w-full h-full"
           >
-            <GlassmorphicCard className="h-full flex flex-col overflow-hidden border-2 border-white/20 shadow-2xl">
+            <GlassmorphicCard className="h-full flex flex-col overflow-hidden border-2 border-white/20 shadow-2xl bg-black/40 backdrop-blur-xl">
               {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
                 <div className="flex items-center gap-3">
@@ -166,22 +198,6 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsMinimized(!isMinimized)}
-                    className="text-white/60 hover:text-white hover:bg-white/10"
-                  >
-                    <Minimize2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsMaximized(!isMaximized)}
-                    className="text-white/60 hover:text-white hover:bg-white/10"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
                     onClick={onClose}
                     className="text-white/60 hover:text-white hover:bg-white/10"
                   >
@@ -191,8 +207,8 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
               </div>
 
               {/* Modal Content */}
-              {!isMinimized && (
-                <div className="flex-1 overflow-hidden">
+              {(
+                <div className="flex-1 flex flex-col overflow-hidden">
                   {isStreaming && !response ? (
                     <div className="p-6 h-full overflow-y-auto">
                       {/* Streaming State */}
@@ -217,14 +233,119 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                       </div>
                     </div>
                   ) : isContentReady ? (
-                    <div className="p-6 h-full overflow-y-auto">
-                      {/* Response Complete State */}
-                      <div className="enhanced-response-area p-6 h-full">
-                        <StreamingText
-                          text={modalContent}
-                          isComplete={true}
-                        />
+                    <div className="p-6 flex-1 flex flex-col overflow-hidden">
+                      {/* Response Header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            {getResponseTypeIcon()}
+                            <Badge className={getResponseTypeColor()}>
+                              {response?.type?.replace('_', ' ') || 'Response'}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-white/60">
+                            Confidence: {Math.round((response?.intent?.confidence || 0) * 100)}%
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Tabbed Content */}
+                      <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ActiveTab)} className="flex-1 flex flex-col overflow-hidden">
+                        <TabsList className="grid w-full grid-cols-3 bg-white/5">
+                          <TabsTrigger value="response">Response</TabsTrigger>
+                          <TabsTrigger value="code">Code</TabsTrigger>
+                          <TabsTrigger value="files">Files</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="response" className="flex-1 overflow-y-auto">
+                          <div className="w-full max-w-full">
+                            <div className="enhanced-response-area p-6 break-words overflow-wrap-anywhere">
+                              <StreamingText
+                                text={modalContent}
+                                isComplete={true}
+                              />
+                            </div>
+                            
+                            {/* Metadata Display */}
+                            {response?.metadata && (
+                              <div className="space-y-3 p-6 pt-0">
+                                {response.metadata.warnings && response.metadata.warnings.length > 0 && (
+                                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 text-yellow-300 mb-2">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <span className="font-medium">Warnings</span>
+                                    </div>
+                                    <ul className="text-sm text-yellow-200 space-y-1">
+                                      {response.metadata.warnings.map((warning, index) => (
+                                        <li key={index}>• {warning}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {response.metadata.suggestions && response.metadata.suggestions.length > 0 && (
+                                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 text-blue-300 mb-2">
+                                      <InfoIcon className="h-4 w-4" />
+                                      <span className="font-medium">Suggestions</span>
+                                    </div>
+                                    <ul className="text-sm text-blue-200 space-y-1">
+                                      {response.metadata.suggestions.map((suggestion, index) => (
+                                        <li key={index}>• {suggestion.description}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="code" className="flex-1 overflow-y-auto">
+                          <div className="p-6 space-y-4 w-full max-w-full">
+                            {response?.metadata?.generatedCode && (
+                              <CodeBlock
+                                code={response.metadata.generatedCode}
+                                language={response.metadata.language || 'typescript'}
+                                filename={response.metadata.files?.[0] || 'generated-code'}
+                              />
+                            )}
+                            
+                            {response?.metadata?.diff && typeof response.metadata.diff === 'object' && (
+                              <DiffViewer
+                                original={(response.metadata.diff as any).original || ''}
+                                modified={(response.metadata.diff as any).modified || ''}
+                                filename={response.metadata.files?.[0] || 'modified-code'}
+                              />
+                            )}
+                            
+                            {(!response?.metadata?.generatedCode && !response?.metadata?.diff) && (
+                              <div className="text-center py-12 text-white/60">
+                                <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-lg font-medium">No code generated</p>
+                                <p className="text-sm mt-2">This response doesn't include any code snippets</p>
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
+
+                        <TabsContent value="files" className="flex-1 overflow-y-auto">
+                          <div className="p-6 w-full max-w-full">
+                            {response?.filesReferences && response.filesReferences.length > 0 ? (
+                              <CodeReferences
+                                filesReferences={response.filesReferences}
+                                className=""
+                              />
+                            ) : (
+                              <div className="text-center py-12 text-white/60">
+                                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-lg font-medium">No files referenced</p>
+                                <p className="text-sm mt-2">This response doesn't include any specific file references</p>
+                              </div>
+                            )}
+                          </div>
+                        </TabsContent>
+                      </Tabs>
                     </div>
                   ) : (
                     <div className="p-6 h-full flex items-center justify-center">
