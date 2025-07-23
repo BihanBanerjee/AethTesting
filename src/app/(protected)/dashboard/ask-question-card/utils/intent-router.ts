@@ -11,6 +11,63 @@ export function extractSimpleContent(result: any): string {
   return JSON.stringify(result, null, 2);
 }
 
+function generateCodeSummary(result: any, question: string): string {
+  // Extract key information from the question to understand what was requested
+  const questionLower = question.toLowerCase();
+  
+  // Determine component/feature type from the question
+  let componentType = 'component';
+  if (questionLower.includes('authentication') || questionLower.includes('auth')) {
+    componentType = 'authentication component';
+  } else if (questionLower.includes('form') && questionLower.includes('validation')) {
+    componentType = 'form with validation';
+  } else if (questionLower.includes('modal') || questionLower.includes('dialog')) {
+    componentType = 'modal component';
+  } else if (questionLower.includes('navbar') || questionLower.includes('navigation')) {
+    componentType = 'navigation component';
+  } else if (questionLower.includes('dashboard')) {
+    componentType = 'dashboard component';
+  } else if (questionLower.includes('table') || questionLower.includes('data')) {
+    componentType = 'data table component';
+  } else if (questionLower.includes('button')) {
+    componentType = 'button component';
+  } else if (questionLower.includes('hook')) {
+    componentType = 'custom hook';
+  } else if (questionLower.includes('util') || questionLower.includes('helper')) {
+    componentType = 'utility function';
+  }
+
+  // Extract technology/framework information
+  const technologies: string[] = [];
+  if (questionLower.includes('typescript')) technologies.push('TypeScript');
+  if (questionLower.includes('react')) technologies.push('React');
+  if (questionLower.includes('next')) technologies.push('Next.js');
+  if (questionLower.includes('tailwind')) technologies.push('Tailwind CSS');
+  if (questionLower.includes('form validation') || questionLower.includes('zod')) technologies.push('form validation');
+  if (questionLower.includes('error handling')) technologies.push('error handling');
+
+  // Get language from result or default to TypeScript
+  const language = result.language || 'TypeScript';
+  const languageLabel = language === 'typescript' ? 'TypeScript' : language === 'javascript' ? 'JavaScript' : language;
+
+  // Build descriptive summary
+  let summary = `${languageLabel} ${componentType}`;
+  
+  if (technologies.length > 0) {
+    summary += ` with ${technologies.join(', ')}`;
+  }
+
+  // Add additional context from the result if available
+  if (result.files && result.files.length > 0 && result.files[0].path) {
+    const fileName = result.files[0].path;
+    if (fileName.includes('.component.') || fileName.includes('Component')) {
+      summary += ` (${fileName})`;
+    }
+  }
+
+  return summary;
+}
+
 export async function routeIntentToHandler(
   intent: any,
   question: string,
@@ -46,7 +103,7 @@ export async function routeIntentToHandler(
         filesReferences: result.generatedCode ? [{
           fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.language === 'typescript' ? 'ts' : 'js'}`,
           sourceCode: result.generatedCode,
-          summary: `Generated ${intent.type} code`
+          summary: generateCodeSummary(result, question)
         }] : []
       };
 
@@ -70,7 +127,7 @@ export async function routeIntentToHandler(
         filesReferences: result.improvedCode ? [{
           fileName: `improved-${intent.targetFiles?.[0] || 'code'}.${result.language || 'ts'}`,
           sourceCode: result.improvedCode,
-          summary: `Improved code with ${intent.type}`
+          summary: generateCodeSummary(result, question).replace(/component|function/, 'improved $&')
         }] : []
       };
 
