@@ -22,8 +22,7 @@ import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
-import { DiffViewer } from '@/components/code/diff-viewer/index';
-import CodeReferences from '@/app/(protected)/dashboard/code-references';
+import { CodeContextTab } from '@/components/ui/code-context-tab';
 import type { EnhancedResponse, ActiveTab } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 
 interface ResponseModalProps {
@@ -250,10 +249,9 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
 
                       {/* Tabbed Content */}
                       <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ActiveTab)} className="flex-1 flex flex-col overflow-hidden">
-                        <TabsList className="grid w-full grid-cols-3 bg-white/5">
+                        <TabsList className="grid w-full grid-cols-2 bg-white/5">
                           <TabsTrigger value="response">Response</TabsTrigger>
-                          <TabsTrigger value="code">Code</TabsTrigger>
-                          <TabsTrigger value="files">Files</TabsTrigger>
+                          <TabsTrigger value="code-context">Code & Context</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="response" className="flex-1 overflow-y-auto">
@@ -300,47 +298,13 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                           </div>
                         </TabsContent>
 
-                        <TabsContent value="code" className="flex-1 overflow-y-auto">
-                          <div className="p-6 space-y-4 w-full max-w-full">
-                            {response?.metadata?.generatedCode && (
-                              <CodeBlock
-                                code={response.metadata.generatedCode}
-                                language={response.metadata.language || 'typescript'}
-                                filename={response.metadata.files?.[0] || 'generated-code'}
-                              />
-                            )}
-                            
-                            {response?.metadata?.diff && typeof response.metadata.diff === 'object' && (
-                              <DiffViewer
-                                original={(response.metadata.diff as any).original || ''}
-                                modified={(response.metadata.diff as any).modified || ''}
-                                filename={response.metadata.files?.[0] || 'modified-code'}
-                              />
-                            )}
-                            
-                            {(!response?.metadata?.generatedCode && !response?.metadata?.diff) && (
-                              <div className="text-center py-12 text-white/60">
-                                <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium">No code generated</p>
-                                <p className="text-sm mt-2">This response doesn't include any code snippets</p>
-                              </div>
-                            )}
-                          </div>
-                        </TabsContent>
-
-                        <TabsContent value="files" className="flex-1 overflow-y-auto">
+                        <TabsContent value="code-context" className="flex-1 overflow-y-auto">
                           <div className="p-6 w-full max-w-full">
-                            {response?.filesReferences && response.filesReferences.length > 0 ? (
-                              <CodeReferences
-                                filesReferences={response.filesReferences}
-                                className=""
+                            {response && (
+                              <CodeContextTab
+                                response={response}
+                                projectId={projectId}
                               />
-                            ) : (
-                              <div className="text-center py-12 text-white/60">
-                                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium">No files referenced</p>
-                                <p className="text-sm mt-2">This response doesn't include any specific file references</p>
-                              </div>
                             )}
                           </div>
                         </TabsContent>

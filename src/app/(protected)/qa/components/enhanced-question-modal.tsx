@@ -20,10 +20,9 @@ import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
-import { DiffViewer } from '@/components/code/diff-viewer/index';
-import CodeReferences from '@/app/(protected)/dashboard/code-references';
-import type { Question, FileReference } from '../types/question';
+import { CodeContextTab } from '@/components/ui/code-context-tab';
+import type { Question } from '../types/question';
+import type { EnhancedResponse } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import { getUserDisplayName, getUserImageUrl, getFileReferencesFromQuestion } from '../types/question';
 
 interface EnhancedQuestionModalProps {
@@ -32,7 +31,7 @@ interface EnhancedQuestionModalProps {
   question: Question;
 }
 
-type ActiveTab = 'response' | 'code' | 'files';
+type ActiveTab = 'response' | 'code-context';
 
 export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
   isOpen,
@@ -77,14 +76,35 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
     }
   };
 
-  // Extract metadata and files from question if available
-  const fileReferences = getFileReferencesFromQuestion(question);
-  const hasGeneratedCode = question.metadata?.generatedCode;
-  const hasFilesReferences = fileReferences.length > 0;
-  
-  // Check if this is from analytics/code generation data
-  const codeGeneration = question.analytics?.codeGenerations?.[0];
-  const hasCodeFromAnalytics = codeGeneration?.generatedCode;
+  // Convert Question to EnhancedResponse format for CodeContextTab
+  const convertQuestionToResponse = (): EnhancedResponse => {
+    const fileReferences = getFileReferencesFromQuestion(question);
+    const codeGeneration = question.analytics?.codeGenerations?.[0];
+    
+    return {
+      type: 'answer',
+      content: question.answer,
+      intent: {
+        type: (question.intent as 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain') || 'question',
+        confidence: question.confidence || 0,
+        requiresCodeGen: !!question.metadata?.generatedCode || !!codeGeneration?.generatedCode,
+        requiresFileModification: false,
+        contextNeeded: 'project'
+      },
+      metadata: {
+        generatedCode: question.metadata?.generatedCode || codeGeneration?.generatedCode,
+        language: question.metadata?.language || codeGeneration?.language || 'typescript',
+        files: codeGeneration?.filename ? [codeGeneration.filename] : undefined
+      },
+      filesReferences: fileReferences.map(ref => ({
+        fileName: ref.fileName,
+        sourceCode: ref.sourceCode,
+        summary: ref.summary || 'No summary available'
+      }))
+    };
+  };
+
+  const enhancedResponse = convertQuestionToResponse();
 
   return (
     <AnimatePresence>
@@ -190,10 +210,9 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
 
                   {/* Tabbed Content */}
                   <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ActiveTab)} className="flex-1 flex flex-col overflow-hidden">
-                    <TabsList className="grid w-full grid-cols-3 bg-white/5">
+                    <TabsList className="grid w-full grid-cols-2 bg-white/5">
                       <TabsTrigger value="response">Response</TabsTrigger>
-                      <TabsTrigger value="code">Code</TabsTrigger>
-                      <TabsTrigger value="files">Files</TabsTrigger>
+                      <TabsTrigger value="code-context">Code & Context</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="response" className="flex-1 overflow-y-auto">
@@ -223,52 +242,12 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
                       </div>
                     </TabsContent>
 
-                    <TabsContent value="code" className="flex-1 overflow-y-auto">
-                      <div className="p-6 space-y-4 w-full max-w-full">
-                        {hasGeneratedCode && (
-                          <CodeBlock
-                            code={hasGeneratedCode}
-                            language={question.metadata?.language || 'typescript'}
-                            filename="generated-code"
-                          />
-                        )}
-                        
-                        {hasCodeFromAnalytics && (
-                          <CodeBlock
-                            code={hasCodeFromAnalytics}
-                            language={codeGeneration?.language || 'typescript'}
-                            filename={codeGeneration?.filename || 'generated-code'}
-                          />
-                        )}
-                        
-                        {(!hasGeneratedCode && !hasCodeFromAnalytics) && (
-                          <div className="text-center py-12 text-white/60">
-                            <Code className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium">No code generated</p>
-                            <p className="text-sm mt-2">This response doesn't include any code snippets</p>
-                          </div>
-                        )}
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="files" className="flex-1 overflow-y-auto">
+                    <TabsContent value="code-context" className="flex-1 overflow-y-auto">
                       <div className="p-6 w-full max-w-full">
-                        {hasFilesReferences ? (
-                          <CodeReferences
-                            filesReferences={fileReferences.map(ref => ({
-                              fileName: ref.fileName,
-                              sourceCode: ref.sourceCode,
-                              summary: ref.summary || 'No summary available'
-                            }))}
-                            className=""
-                          />
-                        ) : (
-                          <div className="text-center py-12 text-white/60">
-                            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium">No files referenced</p>
-                            <p className="text-sm mt-2">This response doesn't include any specific file references</p>
-                          </div>
-                        )}
+                        <CodeContextTab
+                          response={enhancedResponse}
+                          projectId={question.projectId}
+                        />
                       </div>
                     </TabsContent>
                   </Tabs>

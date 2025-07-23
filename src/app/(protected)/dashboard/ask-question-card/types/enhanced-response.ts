@@ -35,7 +35,7 @@ export interface EnhancedResponse {
 
 export type ProcessingStage = 'analyzing' | 'processing' | 'generating' | 'complete';
 
-export type ActiveTab = 'response' | 'code' | 'files';
+export type ActiveTab = 'response' | 'code-context';
 
 export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
 
@@ -66,4 +66,58 @@ export interface ApiMutations {
   reviewCode: any;
   debugCode: any;
   saveAnswer: any;
+}
+
+// New interfaces for collapsible sections
+export type SectionPriority = 'high' | 'medium' | 'low';
+
+export interface CodeData {
+  content: string;
+  language: string;
+  filename?: string;
+}
+
+export interface FileData {
+  content: string;
+  filename: string;
+  language: string;
+}
+
+export interface DiffData {
+  original: string;
+  modified: string;
+  filename: string;
+}
+
+export interface SectionData {
+  generatedCode?: CodeData;
+  originalFile?: FileData;
+  diffView?: DiffData;
+  referencedFiles: FileReference[];
+}
+
+export interface SectionPriorities {
+  generatedCode: SectionPriority;
+  originalFile: SectionPriority;
+  diffView: SectionPriority;
+  referencedFiles: SectionPriority;
+}
+
+export interface SectionState {
+  generatedCode: boolean;
+  originalFile: boolean;
+  diffView: boolean;
+  referencedFiles: boolean;
+}
+
+export interface CollapsibleSectionProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isOpen: boolean;
+  onToggle: () => void;
+  badge?: string;
+  actions?: React.ReactNode;
+  priority?: SectionPriority;
+  children: React.ReactNode;
+  className?: string;
 }
