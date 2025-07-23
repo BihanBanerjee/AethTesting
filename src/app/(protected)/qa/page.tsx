@@ -12,7 +12,7 @@ import { api } from '@/trpc/react';
 import QuestionsTab from './components/questions-tab/questions-tab';
 import AnalyticsDashboard from './components/analytics-dashboard/analytics-dashboard';
 import DeleteConfirmationDialog from './components/delete-confirmation-dialog/delete-confirmation-dialog';
-import QuestionDetail from './components/question-detail/question-detail';
+import { EnhancedQuestionModal } from './components/enhanced-question-modal';
 import ScrollbarStyles from './components/scrollbar-styles';
 import type { Question } from './types/question';
 
@@ -137,15 +137,14 @@ const EnhancedQAPage: React.FC = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Question detail modal */}
-      <AnimatePresence>
-        {selectedQuestion && (
-          <QuestionDetail 
-            question={selectedQuestion} 
-            onClose={closeQuestion} 
-          />
-        )}
-      </AnimatePresence>
+      {/* Enhanced Question Modal */}
+      {selectedQuestion && (
+        <EnhancedQuestionModal 
+          isOpen={true}
+          question={selectedQuestion}
+          onClose={closeQuestion} 
+        />
+      )}
 
       {/* Delete confirmation dialog */}
       <DeleteConfirmationDialog
