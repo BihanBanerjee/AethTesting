@@ -24,6 +24,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
       transition={{ delay: index * 0.1 }}
     >
       <Button
+        type="button"
         variant="outline"
         size="sm"
         onClick={() => onSelect(prediction.suggestion)}
