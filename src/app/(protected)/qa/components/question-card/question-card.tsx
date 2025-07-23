@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
+import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
 
 // Types
 interface User {
@@ -53,9 +54,11 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, index, onClick })
                 />
               </div>
               <div>
-                <h3 className='text-lg font-medium line-clamp-1 text-white'>
-                  {question.question}
-                </h3>
+                <ExpandableQuestionDisplay
+                  question={question.question}
+                  variant="card"
+                  maxLength={100}
+                />
               </div>
             </div>
             <span className='text-xs text-white/50 whitespace-nowrap flex items-center'>

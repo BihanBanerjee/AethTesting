@@ -6,6 +6,7 @@ import { Code, Clock, Star, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
 import type { Question } from '../../types/question';
 import { getFileReferencesFromQuestion, getUserDisplayName, getUserImageUrl } from '../../types/question';
 
@@ -58,11 +59,14 @@ const EnhancedQuestionCard: React.FC<EnhancedQuestionCardProps> = ({
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg">{question.displayProperties.intentIcon}</span>
-                  <h3 className='text-lg font-medium line-clamp-1 text-white'>
-                    {question.question}
-                  </h3>
+                <div className="flex items-start gap-2 mb-1">
+                  <span className="text-lg mt-1 flex-shrink-0">{question.displayProperties.intentIcon}</span>
+                  <ExpandableQuestionDisplay
+                    question={question.question}
+                    variant="card"
+                    maxLength={120}
+                    className="flex-1"
+                  />
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={`text-xs ${question.displayProperties.intentColor}`}>

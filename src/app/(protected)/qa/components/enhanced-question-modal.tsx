@@ -21,6 +21,7 @@ import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { CodeContextTab } from '@/components/ui/code-context-tab';
+import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
 import type { Question } from '../types/question';
 import type { EnhancedResponse } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import { getUserDisplayName, getUserImageUrl, getFileReferencesFromQuestion } from '../types/question';
@@ -142,13 +143,16 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
                       <MessageSquare className="h-5 w-5 text-indigo-200" />
                     </div>
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
                       Saved Answer
                     </h3>
-                    <p className="text-sm text-white/60 truncate max-w-md">
-                      {question.question}
-                    </p>
+                    <ExpandableQuestionDisplay
+                      question={question.question}
+                      variant="modal"
+                      maxLength={100}
+                      className="mt-1"
+                    />
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <Sparkles className="h-4 w-4 text-yellow-400" />
@@ -217,7 +221,25 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
 
                     <TabsContent value="response" className="flex-1 overflow-y-auto">
                       <div className="w-full max-w-full">
+                        {/* Question Section */}
+                        <div className="p-6 border-b border-white/10 bg-gradient-to-r from-blue-600/10 to-indigo-600/10">
+                          <div className="flex items-center gap-2 mb-3">
+                            <MessageSquare className="h-4 w-4 text-blue-400" />
+                            <h4 className="text-sm font-medium text-blue-300">Original Question</h4>
+                          </div>
+                          <ExpandableQuestionDisplay
+                            question={question.question}
+                            variant="detail"
+                            maxLength={200}
+                            showExpandButton={true}
+                          />
+                        </div>
+
                         <div className="enhanced-response-area p-6 break-words overflow-wrap-anywhere">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Sparkles className="h-4 w-4 text-indigo-400" />
+                            <h4 className="text-sm font-medium text-indigo-300">Saved Answer</h4>
+                          </div>
                           <DarkMarkdown content={question.answer} />
                         </div>
                         

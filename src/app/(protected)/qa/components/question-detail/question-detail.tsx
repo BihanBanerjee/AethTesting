@@ -7,6 +7,7 @@ import { ChevronLeft, Clock, Copy, X, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnswerTabContent, CodeTabContent, getClipboardContent } from './tab-content';
 import type { Question } from '../../types/question';
+import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
 import { getUserDisplayName, getUserImageUrl } from '../../types/question';
 
 // Enhanced types
@@ -86,9 +87,14 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
                   className="h-8 w-8 rounded-full ring-2 ring-indigo-400/30"
                 />
               </div>
-              <h2 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100 line-clamp-1 mr-4">
-                {question.question}
-              </h2>
+              <div className="flex-1 mr-4">
+                <ExpandableQuestionDisplay
+                  question={question.question}
+                  variant="detail"
+                  maxLength={150}
+                  className="bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100"
+                />
+              </div>
             </div>
           </div>
           
