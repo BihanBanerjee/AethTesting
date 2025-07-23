@@ -49,10 +49,16 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
   };
 
   const getStatusIcon = () => {
+    if (loading && processingStage === 'analyzing') {
+      return <Loader2 className="h-3 w-3 animate-spin text-blue-400" />;
+    }
     if (loading) {
       return <Loader2 className="h-3 w-3 animate-spin text-yellow-400" />;
     }
-    return <CheckCircle className="h-3 w-3 text-green-400" />;
+    if (intentPreview) {
+      return <CheckCircle className="h-3 w-3 text-green-400" />;
+    }
+    return null;
   };
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -76,19 +82,28 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
             }
           `}</style>
           
-          {/* Intent Badge - Floating in top-right corner of input */}
-          {intentPreview && question.trim() && (
+          {/* Intent Badge - Shows during/after analysis */}
+          {(intentPreview || (loading && processingStage === 'analyzing')) && question.trim() && (
             <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-full px-2 py-0.5 text-xs border border-white/20">
-              {React.createElement(intentIcons[intentPreview.type as keyof typeof intentIcons] || FileText, {
-                className: "h-3 w-3 text-blue-300"
-              })}
-              <span className="text-white/80 font-medium">
-                {formatIntent(intentPreview.type)}
-              </span>
-              <span className="text-white/60">
-                ({Math.round((intentPreview.confidence || 0) * 100)}%)
-              </span>
-              {getStatusIcon()}
+              {loading && processingStage === 'analyzing' ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin text-blue-400" />
+                  <span className="text-white/80 font-medium">Analyzing...</span>
+                </>
+              ) : intentPreview ? (
+                <>
+                  {React.createElement(intentIcons[intentPreview.type as keyof typeof intentIcons] || FileText, {
+                    className: "h-3 w-3 text-blue-300"
+                  })}
+                  <span className="text-white/80 font-medium">
+                    {formatIntent(intentPreview.type)}
+                  </span>
+                  <span className="text-white/60">
+                    ({Math.round((intentPreview.confidence || 0) * 100)}%)
+                  </span>
+                  {getStatusIcon()}
+                </>
+              ) : null}
             </div>
           )}
         </div>

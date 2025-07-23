@@ -1,7 +1,7 @@
 // src/components/ui/response-modal.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -20,10 +20,9 @@ import { Button } from '@/components/ui/button';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
 import { CodeContextTab } from '@/components/ui/code-context-tab';
-import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
+import { CompactQuestionDisplay } from '@/components/ui/compact-question-display';
 import type { EnhancedResponse, ActiveTab } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 
 interface ResponseModalProps {
@@ -110,27 +109,25 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
   };
 
   const getResponseTypeIcon = () => {
-    if (!response?.type) return <MessageSquare className="h-4 w-4" />;
+    if (!response?.type) return <MessageSquare className="h-3 w-3 text-white/60" />;
     switch (response.type) {
-      case 'code': return <Code className="h-4 w-4" />;
-      case 'review': return <CheckCircle className="h-4 w-4" />;
-      case 'debug': return <AlertCircle className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
+      case 'code': return <Code className="h-3 w-3 text-green-400" />;
+      case 'review': return <CheckCircle className="h-3 w-3 text-orange-400" />;
+      case 'debug': return <AlertCircle className="h-3 w-3 text-red-400" />;
+      default: return <FileText className="h-3 w-3 text-blue-400" />;
     }
   };
 
-  const getResponseTypeColor = () => {
-    if (!response?.type) return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    switch (response.type) {
-      case 'code': return 'bg-green-500/20 text-green-300 border-green-500/30';
-      case 'review': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-      case 'debug': return 'bg-red-500/20 text-red-300 border-red-500/30';
-      default: return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    }
-  };
 
   const modalContent = response?.content || streamingContent;
   const isContentReady = response !== null || streamingContent.length > 0;
+
+  // Ensure response tab is selected when modal first opens with content
+  useEffect(() => {
+    if (isOpen && response && activeTab !== 'response' && activeTab !== 'code' && activeTab !== 'files') {
+      onTabChange('response');
+    }
+  }, [isOpen, response]);
 
   return (
     <AnimatePresence>
@@ -153,26 +150,45 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
             className="relative w-full h-full"
           >
             <GlassmorphicCard className="h-full flex flex-col overflow-hidden border-2 border-white/20 shadow-2xl bg-black/40 backdrop-blur-xl">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-500/30 rounded-lg">
-                    <MessageSquare className="h-5 w-5 text-indigo-200" />
+              {/* Compact Modal Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="p-1.5 bg-indigo-500/30 rounded-lg flex-shrink-0">
+                    <MessageSquare className="h-4 w-4 text-indigo-200" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
+                  
+                  {/* Horizontal Layout: Title + Question + Confidence */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <h3 className="text-base font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100 flex-shrink-0">
                       Aetheria Response
                     </h3>
-                    <ExpandableQuestionDisplay
+                    
+                    <div className="text-sm text-white/60 flex-shrink-0">•</div>
+                    
+                    <CompactQuestionDisplay 
                       question={question}
-                      variant="modal"
-                      maxLength={100}
-                      className="mt-1"
+                      maxLength={60}
                     />
+                    
+                    {response?.intent?.confidence && (
+                      <>
+                        <div className="text-sm text-white/60 flex-shrink-0">•</div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {getResponseTypeIcon()}
+                          <span className="text-sm text-white/70">
+                            {response?.type?.replace('_', ' ') || 'Response'}
+                          </span>
+                          <span className="text-sm text-white/60">
+                            ({Math.round(response.intent.confidence * 100)}%)
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Sparkles className="h-4 w-4 text-yellow-400" />
-                    <span className="text-xs text-white/70">AI-Powered</span>
+                  
+                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                    <Sparkles className="h-3 w-3 text-yellow-400" />
+                    <span className="text-xs text-white/70">AI</span>
                   </div>
                 </div>
                 
@@ -236,49 +252,20 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                     </div>
                   ) : isContentReady ? (
                     <div className="p-6 flex-1 flex flex-col overflow-hidden">
-                      {/* Response Header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            {getResponseTypeIcon()}
-                            <Badge className={getResponseTypeColor()}>
-                              {response?.type?.replace('_', ' ') || 'Response'}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-white/60">
-                            Confidence: {Math.round((response?.intent?.confidence || 0) * 100)}%
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Tabbed Content */}
-                      <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ActiveTab)} className="flex-1 flex flex-col overflow-hidden">
+                      <Tabs 
+                        value={activeTab || 'response'} 
+                        onValueChange={(value) => onTabChange(value as ActiveTab)} 
+                        className="flex-1 flex flex-col overflow-hidden"
+                      >
                         <TabsList className="grid w-full grid-cols-2 bg-white/5">
                           <TabsTrigger value="response">Response</TabsTrigger>
-                          <TabsTrigger value="code-context">Code & Context</TabsTrigger>
+                          <TabsTrigger value="code">Code & Context</TabsTrigger>
                         </TabsList>
 
                         <TabsContent value="response" className="flex-1 overflow-y-auto">
                           <div className="w-full max-w-full">
-                            {/* Question Section */}
-                            <div className="p-6 border-b border-white/10 bg-gradient-to-r from-blue-600/10 to-indigo-600/10">
-                              <div className="flex items-center gap-2 mb-3">
-                                <MessageSquare className="h-4 w-4 text-blue-400" />
-                                <h4 className="text-sm font-medium text-blue-300">Your Question</h4>
-                              </div>
-                              <ExpandableQuestionDisplay
-                                question={question}
-                                variant="detail"
-                                maxLength={200}
-                                showExpandButton={true}
-                              />
-                            </div>
-
                             <div className="enhanced-response-area p-6 break-words overflow-wrap-anywhere">
-                              <div className="flex items-center gap-2 mb-4">
-                                <Sparkles className="h-4 w-4 text-indigo-400" />
-                                <h4 className="text-sm font-medium text-indigo-300">Aetheria's Answer</h4>
-                              </div>
                               <StreamingText
                                 text={modalContent}
                                 isComplete={true}
@@ -320,7 +307,7 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                           </div>
                         </TabsContent>
 
-                        <TabsContent value="code-context" className="flex-1 overflow-y-auto">
+                        <TabsContent value="code" className="flex-1 overflow-y-auto">
                           <div className="p-6 w-full max-w-full">
                             {response && (
                               <CodeContextTab

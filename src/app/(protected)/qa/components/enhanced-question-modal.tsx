@@ -21,7 +21,7 @@ import { DarkMarkdown } from '@/components/ui/dark-markdown';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { CodeContextTab } from '@/components/ui/code-context-tab';
-import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
+import { CompactQuestionDisplay } from '@/components/ui/compact-question-display';
 import type { Question } from '../types/question';
 import type { EnhancedResponse } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import { getUserDisplayName, getUserImageUrl, getFileReferencesFromQuestion } from '../types/question';
@@ -93,7 +93,7 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
         contextNeeded: 'project'
       },
       metadata: {
-        generatedCode: question.metadata?.generatedCode || codeGeneration?.generatedCode,
+        generatedCode: question.metadata?.generatedCode || codeGeneration?.generatedCode || undefined,
         language: question.metadata?.language || codeGeneration?.language || 'typescript',
         files: codeGeneration?.filename ? [codeGeneration.filename] : undefined
       },
@@ -128,35 +128,44 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
             className="relative w-full h-full"
           >
             <GlassmorphicCard className="h-full flex flex-col overflow-hidden border-2 border-white/20 shadow-2xl bg-black/40 backdrop-blur-xl">
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 border-b border-white/10 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center">
-                    <div className="mr-3">
-                      <img 
-                        src={getUserImageUrl(question.user)}
-                        alt={getUserDisplayName(question.user)}
-                        className="h-8 w-8 rounded-full ring-2 ring-indigo-400/30"
-                      />
-                    </div>
-                    <div className="p-2 bg-indigo-500/30 rounded-lg">
-                      <MessageSquare className="h-5 w-5 text-indigo-200" />
-                    </div>
+              {/* Compact Modal Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gradient-to-r from-indigo-600/20 to-purple-600/20">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <img 
+                    src={getUserImageUrl(question.user)}
+                    alt={getUserDisplayName(question.user)}
+                    className="h-6 w-6 rounded-full ring-2 ring-indigo-400/30 flex-shrink-0"
+                  />
+                  <div className="p-1.5 bg-indigo-500/30 rounded-lg flex-shrink-0">
+                    <MessageSquare className="h-4 w-4 text-indigo-200" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100">
+                  
+                  {/* Horizontal Layout: Title + Question + Confidence */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <h3 className="text-base font-semibold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-100 flex-shrink-0">
                       Saved Answer
                     </h3>
-                    <ExpandableQuestionDisplay
+                    
+                    <div className="text-sm text-white/60 flex-shrink-0">•</div>
+                    
+                    <CompactQuestionDisplay 
                       question={question.question}
-                      variant="modal"
-                      maxLength={100}
-                      className="mt-1"
+                      maxLength={60}
                     />
+                    
+                    {question.confidence && (
+                      <>
+                        <div className="text-sm text-white/60 flex-shrink-0">•</div>
+                        <div className="text-sm text-white/70 flex-shrink-0">
+                          {Math.round(question.confidence * 100)}% confidence
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Sparkles className="h-4 w-4 text-yellow-400" />
-                    <span className="text-xs text-white/70">AI-Powered</span>
+                  
+                  <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                    <Sparkles className="h-3 w-3 text-yellow-400" />
+                    <span className="text-xs text-white/70">AI</span>
                   </div>
                 </div>
                 
@@ -221,25 +230,7 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
 
                     <TabsContent value="response" className="flex-1 overflow-y-auto">
                       <div className="w-full max-w-full">
-                        {/* Question Section */}
-                        <div className="p-6 border-b border-white/10 bg-gradient-to-r from-blue-600/10 to-indigo-600/10">
-                          <div className="flex items-center gap-2 mb-3">
-                            <MessageSquare className="h-4 w-4 text-blue-400" />
-                            <h4 className="text-sm font-medium text-blue-300">Original Question</h4>
-                          </div>
-                          <ExpandableQuestionDisplay
-                            question={question.question}
-                            variant="detail"
-                            maxLength={200}
-                            showExpandButton={true}
-                          />
-                        </div>
-
                         <div className="enhanced-response-area p-6 break-words overflow-wrap-anywhere">
-                          <div className="flex items-center gap-2 mb-4">
-                            <Sparkles className="h-4 w-4 text-indigo-400" />
-                            <h4 className="text-sm font-medium text-indigo-300">Saved Answer</h4>
-                          </div>
                           <DarkMarkdown content={question.answer} />
                         </div>
                         

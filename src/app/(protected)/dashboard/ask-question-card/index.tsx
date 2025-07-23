@@ -42,13 +42,14 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
     actions.setProcessingStage('analyzing');
     
     try {
-      // First classify the intent
-      actions.setProcessingStage('processing');
+      // First classify the intent - this will be visible to user
       const intent = await classifyQuery(state.question, {
         availableFiles: state.availableFiles,
         selectedFiles: state.selectedFiles
       });
 
+      // Store the intent for display in UI
+      actions.setIntentPreview(intent);
       actions.setProcessingStage('generating');
       
       // Route to appropriate handler
@@ -115,7 +116,13 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => actions.setShowModal(true)}
+              onClick={() => {
+                actions.setShowModal(true);
+                // Ensure response tab is selected when modal opens
+                if (state.response) {
+                  actions.setActiveTab('response');
+                }
+              }}
               className="text-white/60 hover:text-white hover:bg-white/10 p-2 ml-2"
               title="Open in dialog"
             >

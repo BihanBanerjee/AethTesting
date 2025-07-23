@@ -35,7 +35,7 @@ export interface EnhancedResponse {
 
 export type ProcessingStage = 'analyzing' | 'processing' | 'generating' | 'complete';
 
-export type ActiveTab = 'response' | 'code-context';
+export type ActiveTab = 'response' | 'code' | 'files';
 
 export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
 

@@ -21,22 +21,39 @@ export function useIntentHandling({
   const { project } = useProject();
   const { classifyQuery: clientClassifyQuery, isReady } = useIntentClassifier();
   
-  // Server-side classification mutation
-  const serverClassifyMutation = api.project.classifyIntent.useMutation();
+  // Server-side classification mutation with basic error handling
+  const serverClassifyMutation = api.project.classifyIntent.useMutation({
+    retry: 1, // Allow 1 retry for transient failures
+    onError: (error) => {
+      console.error('Intent classification failed:', error);
+    }
+  });
   
-  // Stable classification function that uses server-side when possible
+  // Simplified classification function for on-submit use
   const classifyQuery = useCallback(async (query: string, context?: any) => {
-    if (project?.id) {
-      // Use server-side classification
-      const result = await serverClassifyMutation.mutateAsync({
-        projectId: project.id,
-        query,
-        contextFiles: context?.availableFiles || []
-      });
-      return result.intent;
-    } else {
-      // Fallback to client-side classification
-      return await clientClassifyQuery(query, context);
+    try {
+      if (project?.id) {
+        // Use server-side classification
+        const result = await serverClassifyMutation.mutateAsync({
+          projectId: project.id,
+          query,
+          contextFiles: context?.availableFiles || []
+        });
+        return result.intent;
+      } else {
+        // Fallback to client-side classification
+        return await clientClassifyQuery(query, context);
+      }
+    } catch (error) {
+      console.error('Intent classification failed, using default:', error);
+      // Return default intent on failure
+      return {
+        type: 'question',
+        confidence: 0.5,
+        requiresCodeGen: false,
+        requiresFileModification: false,
+        contextNeeded: 'none'
+      };
     }
   }, [project?.id, serverClassifyMutation, clientClassifyQuery]);
 
@@ -55,25 +72,7 @@ export function useIntentHandling({
     }
   }, [projectFiles, setAvailableFiles]);
 
-  // Intent classification preview
-  useEffect(() => {
-    if (state.question.length > 10 && (project?.id || isReady)) {
-      const timer = setTimeout(async () => {
-        try {
-          setProcessingStage('analyzing');
-          const intent = await classifyQuery(state.question, { 
-            availableFiles: state.availableFiles,
-            selectedFiles: state.selectedFiles 
-          });
-          setIntentPreview(intent);
-        } catch (error) {
-          console.error('Intent preview failed:', error);
-        }
-      }, 800);
-
-      return () => clearTimeout(timer);
-    }
-  }, [state.question, state.availableFiles, state.selectedFiles, project?.id, isReady, classifyQuery, setIntentPreview, setProcessingStage]);
+  // Removed real-time intent classification - now happens on submit
 
   return {
     project,
