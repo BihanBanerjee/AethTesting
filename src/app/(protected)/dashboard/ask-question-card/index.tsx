@@ -5,7 +5,6 @@ import React from 'react';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 // import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
-import { IntentClassifierProvider } from '@/components/code-assistant/intent-classifier-wrapper';
 import { MessageSquare, Sparkles, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -86,6 +85,9 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
       
       toast.success('Answer saved successfully!');
       mutations.refetch();
+      
+      // Clear persisted state since the answer has been saved to database
+      actions.clearPersistedState();
     } catch (error) {
       console.error('Error saving answer:', error);
       toast.error('Failed to save answer. Please try again.');
@@ -189,11 +191,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
 };
 
 const EnhancedAskQuestionCard: React.FC = () => {
-  return (
-    <IntentClassifierProvider>
-      <EnhancedAskQuestionCardContent />
-    </IntentClassifierProvider>
-  );
+  return <EnhancedAskQuestionCardContent />;
 };
 
 export default EnhancedAskQuestionCard;

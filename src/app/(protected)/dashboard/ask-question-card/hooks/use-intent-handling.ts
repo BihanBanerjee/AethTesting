@@ -1,6 +1,5 @@
 // src/app/(protected)/dashboard/ask-question-card/hooks/use-intent-handling.ts
 import { useEffect, useCallback } from 'react';
-import { useIntentClassifier } from '@/components/code-assistant/intent-classifier-wrapper';
 import { api } from '@/trpc/react';
 import useProject from '@/hooks/use-project';
 import type { QuestionState } from '../types/enhanced-response';
@@ -19,7 +18,7 @@ export function useIntentHandling({
   setAvailableFiles 
 }: UseIntentHandlingProps) {
   const { project } = useProject();
-  const { classifyQuery: clientClassifyQuery, isReady } = useIntentClassifier();
+  const isReady = !!project?.id; // Simple readiness check based on project availability
   
   // Server-side classification mutation with basic error handling
   const serverClassifyMutation = api.project.classifyIntent.useMutation({
@@ -29,21 +28,20 @@ export function useIntentHandling({
     }
   });
   
-  // Simplified classification function for on-submit use
+  // Server-side classification function - dashboard always has project?.id
   const classifyQuery = useCallback(async (query: string, context?: any) => {
     try {
-      if (project?.id) {
-        // Use server-side classification
-        const result = await serverClassifyMutation.mutateAsync({
-          projectId: project.id,
-          query,
-          contextFiles: context?.availableFiles || []
-        });
-        return result.intent;
-      } else {
-        // Fallback to client-side classification
-        return await clientClassifyQuery(query, context);
+      if (!project?.id) {
+        throw new Error('Project not available - cannot classify intent');
       }
+      
+      // Use server-side classification (secure)
+      const result = await serverClassifyMutation.mutateAsync({
+        projectId: project.id,
+        query,
+        contextFiles: context?.availableFiles || []
+      });
+      return result.intent;
     } catch (error) {
       console.error('Intent classification failed, using default:', error);
       // Return default intent on failure
@@ -52,10 +50,10 @@ export function useIntentHandling({
         confidence: 0.5,
         requiresCodeGen: false,
         requiresFileModification: false,
-        contextNeeded: 'none'
+        contextNeeded: 'project'
       };
     }
-  }, [project?.id, serverClassifyMutation, clientClassifyQuery]);
+  }, [project?.id, serverClassifyMutation]);
 
   // Get available files for context selection
   const { data: projectFiles } = api.project.getProjectFiles?.useQuery(

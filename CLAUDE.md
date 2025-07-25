@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Aetheria is an AI-powered platform that brings intelligent context to GitHub repositories. It combines vector search capabilities with commit analysis and meeting summarization to help development teams understand, navigate, and collaborate on their codebase more effectively.
 
-**Package Manager**: The project uses npm commands but README mentions `bun` - npm scripts are the standard interface regardless of package manager used.
+**Package Manager**: The project uses npm commands locally but `bun` for deployment (see vercel.json). npm scripts are the standard interface regardless of package manager used.
 
 ## Development Commands
 
@@ -29,6 +29,7 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - `npm run db:migrate` - Deploy database migrations (production)
 - `npm run db:push` - Push schema changes to database (development)
 - `npm run db:studio` - Open Prisma Studio for database exploration
+- `./start-database.sh` - Start local PostgreSQL container with vector extensions (Docker/Podman)
 
 ## Architecture Overview
 
@@ -56,7 +57,10 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - Vector embeddings for code search stored in `SourceCodeEmbedding` model
 - Credit-based system tracked in `User` model (starts with 150 credits)
 - Project lifecycle: INITIALIZING → LOADING_REPO → INDEXING_REPO → POLLING_COMMITS → DEDUCTING_CREDITS → COMPLETED
-- Comprehensive analytics tracking with `AiInteraction`, `CodeGeneration`, and `InteractionAnalytics` models
+- Enhanced analytics with `FileAnalytics`, `InteractionAnalytics`, `SuggestionFeedback` models
+- Advanced question tracking with intent classification, confidence scoring, and satisfaction ratings
+- Code generation analytics with complexity scoring and application rate tracking
+- Structured meeting issue extraction and analysis capabilities
 
 #### AI Integration
 - Code analysis using Google Gemini (`src/lib/gemini.ts`)
@@ -93,6 +97,8 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - **Custom Markdown**: `DarkMarkdown` component for rendering AI responses with proper dark theme
 - **Response Modal**: Streaming dialog with typewriter effects and professional code highlighting
 - **File Viewer**: Progressive disclosure pattern showing summaries with expandable syntax-highlighted code
+- **shadcn/ui Integration**: Uses shadcn/ui component system with customized New York style
+- **Component Variants**: Uses class-variance-authority for consistent component styling patterns
 
 ## Development Guidelines
 
@@ -100,6 +106,9 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - Always use Prisma migrations for schema changes
 - Vector embeddings are stored as `Unsupported("Vector(768)")` type
 - Credits are deducted during the DEDUCTING_CREDITS phase of project processing
+- Uses PostgreSQL extensions preview feature for vector support
+- Local development uses Docker/Podman containers via `start-database.sh`
+- Automatic password generation for security when using default credentials
 
 ### AI Integration
 - Rate limiting is implemented in `src/lib/gemini.ts` (20 requests/minute)
@@ -112,13 +121,20 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - Public routes: `/`, `/sign-in`, `/sign-up`, API webhooks, Inngest endpoints
 - User context available through tRPC procedures
 
-### Error Handling
+### Error Handling & Build Configuration
 - ESLint and TypeScript errors are ignored during builds (see next.config.js)
 - Always validate user inputs with Zod schemas
 - Credit validation occurs before project creation
+- Uses modern ESLint flat config with TypeScript integration
+- PostCSS configured with Tailwind CSS plugin
+- Turbo acceleration enabled for development server
 
 ## Environment Variables Required
+**Core Required**:
 - `DATABASE_URL` - PostgreSQL connection string with vector extension
+- `NODE_ENV` - Environment (development/test/production)
+
+**Note**: While many environment variables are referenced in the codebase, only `DATABASE_URL` and `NODE_ENV` are validated in `src/env.js`. Other services may require:
 - `GEMINI_API_KEY` - Google Gemini API key for AI operations
 - `ASSEMBLYAI_API_KEY` - AssemblyAI API key for meeting transcription
 - `GITHUB_TOKEN` - GitHub API token for repository access
@@ -137,9 +153,29 @@ This project does not currently have a formal test suite. Development relies on:
 
 ## Prerequisites & Setup
 - **Node.js**: v18+ required
-- **PostgreSQL**: Must have vector extension installed
+- **PostgreSQL**: Must have vector extension installed (or use `./start-database.sh` for Docker setup)
 - **Package Manager**: Can use npm, bun, or pnpm (npm scripts work with any)
+- **Container Runtime**: Docker or Podman for local database development
 - **API Keys**: Multiple external services required (see Environment Variables section)
+
+### Quick Start
+1. Clone repository and install dependencies: `npm install`
+2. Set up local database: `./start-database.sh`
+3. Run database migrations: `npm run db:generate`
+4. Start development server: `npm run dev`
+
+## Development Tools & Configuration
+
+### TypeScript Configuration
+- **Strict Mode**: Uses strict TypeScript with `noUncheckedIndexedAccess` for enhanced type safety
+- **Modern Modules**: Configured for ESNext modules with bundler resolution
+- **Path Aliases**: Single `@/*` alias pointing to `src/*`
+
+### Package Dependencies
+- **Service Layer**: Well-structured with `ai-code-service`, `analytics-service`, `meeting-service`
+- **LangChain Integration**: Uses community package with special ignore overrides
+- **3D Graphics**: Three.js integration for enhanced UI effects
+- **Auto-installation**: `postinstall` script runs `prisma generate` automatically
 
 ## CLI Initialization Guidance
 - This repository uses a custom initialization script for setting up Aetheria projects
