@@ -1,87 +1,114 @@
 'use client'
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { StreamableValue } from 'ai/rsc';
+import { Copy, Check } from 'lucide-react';
 import { MessageContainer } from '../components/message-container';
 import { MessageHeader } from '../components/message-header';
 import { GeneratedCodeSection } from '../components/generated-code-section';
 import { DiffDisplaySection } from '../components/diff-display-section';
 import { SuggestionsSection } from '../components/suggestions-section';
 import { FileReferencesSection } from '../components/file-references-section';
+import { EnhancedResponseDisplay } from '../enhanced-response/enhanced-response-display';
 import { useMessageActions } from '../hooks/use-message-actions';
 import type { MessageDisplayProps } from '../types/message-display.types';
 
-// Component to handle streamable content
-const StreamableContent: React.FC<{ content: string | StreamableValue<string> }> = ({ content }) => {
-  // Debug logging to understand the structure
-  console.log('StreamableContent - Processing content:', content);
-  console.log('StreamableContent - Content type:', typeof content);
+// ChatGPT-style streamable content component with markdown support
+const StreamableContent: React.FC<{ content: string | StreamableValue<string>, messageType: 'user' | 'assistant' }> = ({ content, messageType }) => {
+  const [copied, setCopied] = useState(false);
   
-  // Check if content is a string
-  if (typeof content === 'string') {
-    console.log('StreamableContent - Rendering string content');
-    return <div className="prose prose-invert max-w-none">{content}</div>;
-  }
-  
-  // Handle StreamableValue object - avoid the problematic useStreamableValue hook
-  if (content && typeof content === 'object') {
-    console.log('StreamableContent - Handling object content');
-    console.log('StreamableContent - Object keys:', Object.keys(content));
+  // Extract content from various formats
+  const extractContent = (): string => {
+    if (typeof content === 'string') {
+      return content;
+    }
     
-    // Check if this has the StreamableValue structure {curr: ..., next: ...}
-    if ('curr' in content || 'next' in content) {
-      console.log('StreamableContent - Found StreamableValue structure');
-      
-      const streamableObj = content as { curr?: string; next?: any };
+    if (content && typeof content === 'object') {
+      const streamableObj = content as { curr?: string; next?: unknown };
       let extractedContent = '';
       
       // Get current value
       if (streamableObj.curr !== undefined && streamableObj.curr !== null) {
         extractedContent += String(streamableObj.curr);
-        console.log('StreamableContent - Found curr:', streamableObj.curr);
       }
       
       // Handle next value
       if (streamableObj.next !== undefined && streamableObj.next !== null) {
-        console.log('StreamableContent - Processing next:', streamableObj.next);
-        
         if (typeof streamableObj.next === 'string') {
           extractedContent += streamableObj.next;
         } else if (typeof streamableObj.next === 'object') {
-          // Next is an object, check if it has value property or other content
-          const nextObj = streamableObj.next as any;
-          console.log('StreamableContent - Next object keys:', Object.keys(nextObj));
-          
-          // Try to find content in the next object
+          const nextObj = streamableObj.next as Record<string, unknown>;
           if ('value' in nextObj && nextObj.value) {
             extractedContent += String(nextObj.value);
-            console.log('StreamableContent - Found value in next:', nextObj.value);
           } else if ('curr' in nextObj && nextObj.curr) {
             extractedContent += String(nextObj.curr);
-            console.log('StreamableContent - Found curr in next:', nextObj.curr);
           } else if ('content' in nextObj && nextObj.content) {
             extractedContent += String(nextObj.content);
-            console.log('StreamableContent - Found content in next:', nextObj.content);
-          } else {
-            // If next is an empty object {}, it might be streaming
-            console.log('StreamableContent - Next is empty or unknown structure, showing loading...');
-            extractedContent = extractedContent || 'Loading response...';
           }
         }
       }
       
-      console.log('StreamableContent - Final extracted content:', extractedContent);
-      return <div className="prose prose-invert max-w-none">{extractedContent || 'Processing...'}</div>;
+      return extractedContent || 'Processing...';
     }
     
-    // If not a StreamableValue structure, show as JSON
-    console.log('StreamableContent - Not a StreamableValue, showing as JSON');
-    return <div className="prose prose-invert max-w-none">{JSON.stringify(content)}</div>;
-  }
+    return String(content) || 'No content available';
+  };
+
+  const contentText = extractContent();
   
-  // Final fallback
-  console.log('StreamableContent - Using final fallback');
-  return <div className="prose prose-invert max-w-none">{String(content) || 'No content available'}</div>;
+  // Copy message content
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(contentText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  // User messages: simple text with copy button
+  if (messageType === 'user') {
+    return (
+      <div className="relative group">
+        <div className="text-white/90 leading-relaxed break-words">
+          {contentText}
+        </div>
+        
+        {/* Copy button for user messages */}
+        <button
+          onClick={handleCopy}
+          className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 rounded bg-white/10 hover:bg-white/20 ${copied ? 'copy-button-success' : ''}`}
+          title="Copy message"
+        >
+          {copied ? (
+            <Check className="h-3 w-3 text-green-400" />
+          ) : (
+            <Copy className="h-3 w-3 text-white/60 hover:text-white/80" />
+          )}
+        </button>
+      </div>
+    );
+  }
+
+  // Assistant messages: enhanced display for long responses, simple markdown for short ones
+  return (
+    <div className="relative group">
+      {/* Use enhanced display for long responses, simple markdown for short ones */}
+      <EnhancedResponseDisplay 
+        content={contentText} 
+        messageType={messageType}
+      />
+      
+      {/* Streaming indicator */}
+      {contentText === 'Processing...' && (
+        <div className="flex items-center gap-2 mt-4 text-white/50">
+          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></div>
+          <span className="text-sm">AI is thinking...</span>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
@@ -95,7 +122,7 @@ export const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
         timestamp={message.timestamp}
       />
       
-      <StreamableContent content={message.content} />
+      <StreamableContent content={message.content} messageType={message.type} />
 
       {/* Generated Code Section */}
       {message.metadata?.generatedCode && (

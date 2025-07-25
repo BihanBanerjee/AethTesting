@@ -1,94 +1,58 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import { IntentClassifier, type QueryIntent } from '@/lib/intent-classifier';
-import { toast } from 'sonner';
+import React, { useState } from 'react';
+import { type QueryIntent } from '@/lib/intent-classifier';
+import { api } from '@/trpc/react';
 import { IntentClassifierContext } from '../context/intent-classifier-context';
 import { createFallbackIntent } from '../utils/fallback-classifier';
 import type { ProjectContext } from '../types/intent-classifier.types';
 
 export const IntentClassifierProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [classifier, setClassifier] = useState<IntentClassifier | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [isReady] = useState(true); // Always ready since we use tRPC
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initClassifier = async () => {
-      try {
-        // Check if we have the API key on the client side
-        const apiKeyPresent = typeof window !== 'undefined' && 
-          document.cookie.includes('gemini-api-available=true');
-
-        setHasApiKey(apiKeyPresent);
-        
-        const newClassifier = new IntentClassifier();
-        setClassifier(newClassifier);
-        setIsReady(true);
-        setError(null);
-        
-        if (!apiKeyPresent) {
-          console.warn('Gemini API key not detected - will use fallback classification');
-        }
-      } catch (error) {
-        console.error('Failed to initialize intent classifier:', error);
-        setError(error instanceof Error ? error.message : 'Failed to initialize');
-        // Still set as ready so fallback can work
-        setIsReady(true);
-      }
-    };
-
-    initClassifier();
-  }, []);
+  // Use the proper tRPC route for intent classification
+  const classifyIntentMutation = api.project.classifyIntent.useMutation();
 
   const classifyQuery = async (query: string, context?: ProjectContext): Promise<QueryIntent> => {
-    if (!classifier) {
-      // Return default classification if classifier not ready
+    // WARNING: This function makes SERVER-SIDE API calls and should ONLY be used for:
+    // 1. Actual message sending (not input suggestions)
+    // 2. Real user interactions requiring AI classification
+    // For input suggestions, use createFallbackIntent() directly to avoid billing costs!
+    
+    if (!context?.projectId) {
+      // Return fallback classification if no project context
       return createFallbackIntent(query);
     }
 
     try {
-      const result = await classifier.classifyQuery(query, context);
+      const result = await classifyIntentMutation.mutateAsync({
+        projectId: context.projectId,
+        query,
+        contextFiles: context.targetFiles
+      });
       
       // Clear any previous errors on successful classification
-      if (error && result.confidence > 0.6) {
+      if (error) {
         setError(null);
       }
       
-      return result;
+      return result.intent;
     } catch (error) {
       console.error('Intent classification failed:', error);
+      setError('Classification temporarily unavailable');
       
-      // Handle specific API key errors
-      if (error instanceof Error && 
-          (error.message.includes('API key not valid') || 
-           error.message.includes('API_KEY_INVALID'))) {
-        const errorMsg = 'AI features require a valid Gemini API key. Using basic classification.';
-        setError(errorMsg);
-        setHasApiKey(false);
-        
-        // Show user-friendly message only once
-        if (!sessionStorage.getItem('api-key-error-shown')) {
-          toast.warning('AI features limited', {
-            description: 'Some advanced features may not work without proper API configuration.',
-            duration: 5000
-          });
-          sessionStorage.setItem('api-key-error-shown', 'true');
-        }
-      } else {
-        setError('Classification temporarily unavailable');
-      }
-      
+      // Return fallback classification on error
       return createFallbackIntent(query);
     }
   };
 
   return (
     <IntentClassifierContext.Provider value={{ 
-      classifier, 
+      classifier: null, // No longer needed since we use tRPC
       classifyQuery, 
-      isReady, 
-      hasApiKey, 
+      isReady,
+      hasApiKey: true, // Always true since API key is server-side only
       error 
     }}>
       {children}

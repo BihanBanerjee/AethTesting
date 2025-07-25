@@ -22,7 +22,29 @@ export function detectLanguage(fileName: string): string {
     'jsx': 'javascript',
     'py': 'python',
     'rs': 'rust',
-    'go': 'go'
+    'go': 'go',
+    'md': 'markdown',
+    'markdown': 'markdown',
+    'json': 'json',
+    'yml': 'yaml',
+    'yaml': 'yaml',
+    'html': 'html',
+    'css': 'css',
+    'scss': 'scss',
+    'sass': 'sass',
+    'less': 'less',
+    'php': 'php',
+    'rb': 'ruby',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'cs': 'csharp',
+    'sh': 'bash',
+    'bash': 'bash',
+    'zsh': 'bash',
+    'sql': 'sql',
+    'xml': 'xml',
+    'txt': 'text'
   };
   return langMap[ext || ''] || 'text';
 }

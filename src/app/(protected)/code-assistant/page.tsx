@@ -51,6 +51,9 @@ const CodeAssistantPageContent = () => {
     projectContext
   } = useCodeAssistant();
 
+  // Move the mutation hook to the top level
+  const generateCodeMutation = api.project.generateCode.useMutation();
+
 
   const handleRemoveFile = (file: string) => {
     setSelectedFiles(prev => prev.filter(f => f !== file));
@@ -131,10 +134,8 @@ const CodeAssistantPageContent = () => {
             projectId={project?.id || ''}
             availableFiles={availableFiles}
             onGenerate={async (request) => {
-              // Use the same API mutation from the hook
-              const generateCode = api.project.generateCode.useMutation();
-              
-              const result = await generateCode.mutateAsync({
+              // Use the mutation hook that's defined at the top level
+              const result = await generateCodeMutation.mutateAsync({
                 projectId: project!.id,
                 prompt: request.prompt,
                 requirements: {

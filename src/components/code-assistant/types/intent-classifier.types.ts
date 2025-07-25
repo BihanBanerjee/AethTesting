@@ -1,9 +1,11 @@
 import type { QueryIntent, IntentClassifier } from '@/lib/intent-classifier';
 
 export interface ProjectContext {
+  projectId?: string;
   availableFiles?: string[];
   techStack?: string[];
   recentQueries?: string[];
+  targetFiles?: string[];
   [key: string]: unknown;
 }
 

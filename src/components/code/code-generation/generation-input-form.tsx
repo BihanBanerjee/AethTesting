@@ -1,10 +1,82 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wand2, Settings2 } from 'lucide-react';
 import type { GenerationInputFormProps } from '../shared/types';
+
+// Smart auto-detection for language based on file extension and context
+const detectLanguageFromFile = (filename?: string, prompt?: string): string => {
+  // File extension mapping
+  if (filename) {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    const mapping: Record<string, string> = {
+      'md': 'markdown',
+      'markdown': 'markdown',
+      'json': 'json',
+      'yml': 'yaml',
+      'yaml': 'yaml',
+      'html': 'html',
+      'htm': 'html',
+      'css': 'css',
+      'scss': 'css',
+      'sass': 'css',
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'py': 'python',
+      'rs': 'rust',
+      'go': 'go',
+      'sql': 'sql',
+      'sh': 'shell',
+      'bash': 'shell',
+      'xml': 'xml',
+      'toml': 'toml',
+      'ini': 'ini',
+      'env': 'shell',
+      'dockerfile': 'dockerfile',
+      'tf': 'hcl',
+    };
+    if (mapping[ext]) return mapping[ext];
+  }
+  
+  // Context-based detection from prompt
+  if (prompt) {
+    const lowerPrompt = prompt.toLowerCase();
+    if (lowerPrompt.includes('readme') || lowerPrompt.includes('markdown')) return 'markdown';
+    if (lowerPrompt.includes('config') || lowerPrompt.includes('json')) return 'json';
+    if (lowerPrompt.includes('yaml') || lowerPrompt.includes('yml')) return 'yaml';
+    if (lowerPrompt.includes('html')) return 'html';
+    if (lowerPrompt.includes('css') || lowerPrompt.includes('style')) return 'css';
+    if (lowerPrompt.includes('database') || lowerPrompt.includes('query')) return 'sql';
+    if (lowerPrompt.includes('script') || lowerPrompt.includes('bash')) return 'shell';
+  }
+  
+  return 'typescript'; // Final fallback
+};
+
+// Expanded language options
+const languageOptions = [
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'json', label: 'JSON' },
+  { value: 'yaml', label: 'YAML' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'python', label: 'Python' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'go', label: 'Go' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'shell', label: 'Shell/Bash' },
+  { value: 'xml', label: 'XML' },
+  { value: 'toml', label: 'TOML' },
+  { value: 'ini', label: 'INI' },
+  { value: 'dockerfile', label: 'Dockerfile' },
+  { value: 'hcl', label: 'HCL (Terraform)' },
+];
 
 export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
   availableFiles,
@@ -13,6 +85,13 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
   onGenerate,
   isGenerating
 }) => {
+  // Auto-detect language when target file or prompt changes
+  useEffect(() => {
+    const detectedLanguage = detectLanguageFromFile(request.targetFile, request.prompt);
+    if (detectedLanguage !== request.language) {
+      onRequestChange({ ...request, language: detectedLanguage });
+    }
+  }, [request.targetFile, request.prompt]);
   return (
     <Card className="glassmorphism border-white/20">
       <CardHeader>
@@ -23,7 +102,7 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="text-sm font-medium text-white/80 mb-2 block">
               Request Type
             </label>
@@ -47,7 +126,7 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
             </Select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="text-sm font-medium text-white/80 mb-2 block">
               Target File (Optional)
             </label>
@@ -58,13 +137,23 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
                 targetFile: value === 'none' ? undefined : value 
               })}
             >
-              <SelectTrigger className="bg-white/10 border-white/20 text-white">
+              <SelectTrigger 
+                className="bg-white/10 border-white/20 text-white w-full max-w-full overflow-hidden"
+                title={request.targetFile ? request.targetFile : undefined}
+              >
                 <SelectValue placeholder="Select file..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-w-[400px]">
                 <SelectItem value="none">No specific file</SelectItem>
                 {availableFiles.map(file => (
-                  <SelectItem key={file} value={file}>{file}</SelectItem>
+                  <SelectItem 
+                    key={file} 
+                    value={file}
+                    className="truncate overflow-hidden text-ellipsis"
+                    title={file}
+                  >
+                    {file}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -84,7 +173,7 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="text-sm font-medium text-white/80 mb-2 block">
               Language
             </label>
@@ -96,16 +185,16 @@ export const GenerationInputForm: React.FC<GenerationInputFormProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="typescript">TypeScript</SelectItem>
-                <SelectItem value="javascript">JavaScript</SelectItem>
-                <SelectItem value="python">Python</SelectItem>
-                <SelectItem value="rust">Rust</SelectItem>
-                <SelectItem value="go">Go</SelectItem>
+                {languageOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="text-sm font-medium text-white/80 mb-2 block">
               Framework (Optional)
             </label>

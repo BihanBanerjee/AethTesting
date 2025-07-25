@@ -89,7 +89,7 @@ export class ResponseParser {
     const codeBlocks = response.match(/```[\s\S]*?```/g) || [];
     
     let extractedCode = '';
-    let language = 'typescript';
+    let language = 'text';  // Changed from 'typescript' to 'text' as more neutral default
     let explanation = 'Generated code (extracted from malformed response)';
     
     // Look for the largest code block that isn't JSON

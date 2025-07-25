@@ -27,9 +27,7 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
   const fileState = useFileSelection();
   const processingState = useProcessingStates();
   const apiRouting = useAPIRouting(
-    fileState.selectedFiles,
-    processingState.setProcessingStage,
-    processingState.setProgress
+    fileState.selectedFiles
   );
 
   const handleSendMessage = async () => {

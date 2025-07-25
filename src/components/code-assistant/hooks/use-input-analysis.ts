@@ -1,25 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { useIntentClassifier } from '../intent-classifier-wrapper';
 import { generateSuggestions } from '../utils/suggestion-generator';
-import { api } from '@/trpc/react';
+import { createFallbackIntent } from '../utils/fallback-classifier';
 import type { SuggestionPrediction, ProjectContext } from '../types/smart-input-suggestion.types';
 
 export function useInputAnalysis(currentInput: string, projectContext?: ProjectContext) {
-  const { classifyQuery: clientClassifyQuery, isReady } = useIntentClassifier();
   const [predictions, setPredictions] = useState<SuggestionPrediction[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  
-  // Use refs to store stable values
-  const projectIdRef = useRef(projectContext?.projectId);
-  const availableFilesRef = useRef(projectContext?.availableFiles);
-  
-  // Update refs when values change
-  useEffect(() => {
-    projectIdRef.current = projectContext?.projectId;
-    availableFilesRef.current = projectContext?.availableFiles;
-  }, [projectContext?.projectId, projectContext?.availableFiles]);
 
   useEffect(() => {
     if (!currentInput.trim() || currentInput.length < 10) {
@@ -27,35 +15,29 @@ export function useInputAnalysis(currentInput: string, projectContext?: ProjectC
       return;
     }
 
-    // For input analysis suggestions, just disable if no proper setup
-    // The real classification will happen on question submission
-    if (!projectIdRef.current && !isReady) {
-      setPredictions([]);
-      return;
-    }
-
     const analyzeInput = async () => {
       setIsAnalyzing(true);
       try {
-        // For input suggestions, only use client-side classification to avoid complexity
-        // Server-side classification will be used for actual question submission
-        const intent = await clientClassifyQuery(currentInput, projectContext);
+        // IMPORTANT: Use ONLY fallback classification for input suggestions
+        // This prevents unnecessary API calls and billing costs
+        // Server-side classification is reserved for actual message sending
+        const intent = createFallbackIntent(currentInput);
         
-        // Generate contextual suggestions based on intent
+        // Generate contextual suggestions based on fallback intent
         const suggestions = generateSuggestions(currentInput, intent, projectContext);
         setPredictions(suggestions);
       } catch (error) {
         console.error('Failed to analyze input:', error);
-        // Clear predictions on error
         setPredictions([]);
       } finally {
         setIsAnalyzing(false);
       }
     };
 
-    const debounceTimer = setTimeout(analyzeInput, 800);
+    // Reduced debounce time since we're not making API calls
+    const debounceTimer = setTimeout(analyzeInput, 300);
     return () => clearTimeout(debounceTimer);
-  }, [currentInput, clientClassifyQuery, isReady]); // Stable dependencies
+  }, [currentInput]); // Only currentInput as dependency
 
   return { predictions, isAnalyzing };
 }

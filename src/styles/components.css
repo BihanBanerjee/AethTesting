@@ -234,3 +234,214 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ChatGPT-style message enhancements */
+.chatgpt-style-response {
+  line-height: 1.6;
+  font-size: 15px;
+  word-spacing: 0.02em;
+}
+
+.chatgpt-style-response h1,
+.chatgpt-style-response h2,
+.chatgpt-style-response h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  line-height: 1.3;
+}
+
+.chatgpt-style-response p {
+  margin-bottom: 1.25em;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.chatgpt-style-response ul,
+.chatgpt-style-response ol {
+  margin-bottom: 1.25em;
+  padding-left: 1.5em;
+}
+
+.chatgpt-style-response li {
+  margin-bottom: 0.5em;
+  line-height: 1.6;
+}
+
+.chatgpt-style-response code {
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.chatgpt-style-response pre {
+  margin: 1.5em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.chatgpt-style-response blockquote {
+  margin: 1.5em 0;
+  padding: 1em 1.5em;
+  border-left: 4px solid rgba(139, 92, 246, 0.6);
+  background: rgba(139, 92, 246, 0.08);
+  border-radius: 0 8px 8px 0;
+}
+
+/* Message container enhancements */
+.chatgpt-user-message {
+  transition: all 0.2s ease;
+}
+
+.chatgpt-user-message:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.2);
+}
+
+.chatgpt-assistant-message {
+  transition: all 0.2s ease;
+}
+
+.chatgpt-assistant-message:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Copy button animation */
+@keyframes copy-success {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.copy-button-success {
+  animation: copy-success 0.3s ease;
+}
+
+/* Enhanced Response Display Styles */
+.enhanced-response-section {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.enhanced-response-section:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.enhanced-response-header {
+  padding: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.enhanced-response-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.enhanced-response-content {
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid;
+}
+
+.priority-high {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.priority-medium {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.priority-low {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.section-type-icon {
+  font-size: 1.2em;
+  margin-right: 0.5rem;
+}
+
+/* Summary card specific styles */
+.summary-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(147, 51, 234, 0.1));
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Enhanced response animations */
+@keyframes section-expand {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: auto;
+    opacity: 1;
+  }
+}
+
+@keyframes section-collapse {
+  from {
+    height: auto;
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+.section-expand {
+  animation: section-expand 0.2s ease-out;
+}
+
+.section-collapse {
+  animation: section-collapse 0.2s ease-in;
+}
+
+/* Quick action buttons */
+.quick-action-btn {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.quick-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
