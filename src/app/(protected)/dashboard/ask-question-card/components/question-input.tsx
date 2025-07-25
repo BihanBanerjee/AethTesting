@@ -76,9 +76,9 @@ export const QuestionInput: React.FC<QuestionInputProps> = ({
           />
           <style jsx>{`
             textarea::placeholder {
-              color: #dbeafe !important;
+              color: rgba(255, 255, 255, 0.8) !important;
               opacity: 1 !important;
-              font-weight: 400;
+              font-weight: 500;
             }
           `}</style>
           
