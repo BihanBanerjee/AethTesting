@@ -1,4 +1,5 @@
 import { type PrismaClient } from "@prisma/client";
+import { type UnifiedResponse } from "@/types/unified-response";
 
 interface QueryResult {
   fileName: string;
@@ -27,7 +28,7 @@ export const aiCodeService = {
         constraints?: string[];
       };
     }
-  ) {
+  ): Promise<UnifiedResponse> {
     const { CodeGenerationEngine } = await import('@/lib/code-generation');
     const { IntentClassifier } = await import('@/lib/intent-classifier');
     
@@ -47,13 +48,28 @@ export const aiCodeService = {
       contextFiles: input.context
     });
     
+    // Return unified response format (same as improveCode)
     return {
+      content: result.explanation || 'Code generated successfully',
+      contentType: 'code' as const,
+      intent: 'code_generation',
+      confidence: 0.8,
       generatedCode: result.files[0]?.content,
-      explanation: result.explanation,
       language: result.files[0]?.language || 'typescript',
-      warnings: result.warnings,
-      dependencies: result.dependencies,
-      files: result.files
+      explanation: result.explanation,
+      suggestions: result.warnings?.map(w => ({ 
+        type: 'improvement' as const, 
+        description: w 
+      })) || [],
+      files: result.files.map(file => ({
+        path: file.path,
+        fileName: file.path.split('/').pop() || file.path,
+        content: file.content,
+        language: file.language,
+        changeType: file.changeType || 'create'
+      })),
+      warnings: result.warnings || [],
+      dependencies: result.dependencies || []
     };
   },
 
@@ -65,7 +81,7 @@ export const aiCodeService = {
       targetFiles?: string[];
       improvementType?: 'performance' | 'readability' | 'security' | 'optimization';
     }
-  ) {
+  ): Promise<UnifiedResponse> {
     const { CodeGenerationEngine } = await import('@/lib/code-generation');
     const { IntentClassifier } = await import('@/lib/intent-classifier');
     
@@ -84,15 +100,94 @@ export const aiCodeService = {
       targetFile: input.targetFiles?.[0]
     });
     
+    // Debug logging for troubleshooting
+    console.log('🔍 Debug: CodeGenerationResult structure:', {
+      type: result.type,
+      filesCount: result.files?.length,
+      firstFileContent: result.files[0]?.content?.substring(0, 100) + '...',
+      firstFileLanguage: result.files[0]?.language,
+      explanation: result.explanation?.substring(0, 100) + '...'
+    });
+    
+    // Safeguard: Ensure generatedCode contains actual code, not JSON or malformed content
+    let safeGeneratedCode = result.files[0]?.content;
+    
+    // Check for various types of malformed content
+    if (safeGeneratedCode) {
+      // Case 1: JSON structure detected
+      if (safeGeneratedCode.trim().startsWith('{') && safeGeneratedCode.includes('"language"')) {
+        console.warn('⚠️ Detected JSON structure in generatedCode, attempting to extract content');
+        try {
+          const parsed = JSON.parse(safeGeneratedCode);
+          if (parsed.files && Array.isArray(parsed.files) && parsed.files[0]?.content) {
+            safeGeneratedCode = parsed.files[0].content;
+          } else if (parsed.content) {
+            safeGeneratedCode = parsed.content;
+          }
+        } catch (error) {
+          console.error('Failed to parse JSON in generatedCode:', error);
+          safeGeneratedCode = 'Unable to extract code content - please try again';
+        }
+      }
+      
+      // Case 2: Truncated JSON response (contains JSON fields but not valid JSON)
+      else if (safeGeneratedCode.includes('"language"') && safeGeneratedCode.includes('"explanation"')) {
+        console.warn('⚠️ Detected truncated JSON response in generatedCode');
+        
+        // Try to extract just the content part before the JSON structure
+        const contentMatch = safeGeneratedCode.match(/^([^"]*?)(?=",\s*"language")/s);
+        if (contentMatch && contentMatch[1]) {
+          let extractedContent = contentMatch[1].trim();
+          extractedContent = extractedContent.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          
+          // Check if this looks like incomplete content - temporarily less aggressive
+          if (extractedContent.length < 50) { // Much more lenient threshold
+            safeGeneratedCode = `# README Improvement Incomplete\n\nThe AI response was truncated. Here's what was recovered:\n\n${extractedContent}\n\n**Please try asking again for the complete improved README.**`;
+          } else {
+            // Let the actual content through, even if it seems partial
+            console.log(`⚠️ Extracted content from truncated response (${extractedContent.length} chars)`);
+            safeGeneratedCode = extractedContent;
+          }
+          
+          console.log('✅ Extracted content from truncated response');
+        } else {
+          safeGeneratedCode = 'Response was truncated - please try again for complete content';
+        }
+      }
+      
+      // Case 3: Response parsing failure message  
+      else if (safeGeneratedCode.includes('Generated code (extracted from malformed response)')) {
+        console.log('🐛 DEBUG: Response parsing failed - adding debug info to response');
+        // Add debug info to the response so we can see it in the browser
+        const debugInfo = `\n\n---DEBUG INFO---\nOriginal response length: ${safeGeneratedCode.length}\nFirst 200 chars: ${safeGeneratedCode.substring(0, 200)}\nLast 200 chars: ${safeGeneratedCode.substring(Math.max(0, safeGeneratedCode.length - 200))}\n---END DEBUG---\n\n`;
+        safeGeneratedCode = debugInfo + safeGeneratedCode;
+        safeGeneratedCode = 'AI response was malformed - please try asking again';
+      }
+    }
+    
+    // Return unified response format
     return {
-      improvedCode: result.files[0]?.content,
+      content: result.explanation || 'Code improved successfully',
+      contentType: 'code' as const,
+      intent: 'code_improvement',
+      confidence: 0.8,
+      generatedCode: safeGeneratedCode,
+      language: result.files[0]?.language || 'text',
       explanation: result.explanation,
       diff: result.files[0]?.diff,
       suggestions: result.warnings?.map(w => ({ 
         type: 'improvement' as const, 
         description: w 
       })) || [],
-      language: result.files[0]?.language
+      files: result.files.map(file => ({
+        path: file.path,
+        fileName: file.path.split('/').pop() || file.path,
+        content: file.content,
+        language: file.language,
+        changeType: file.changeType || 'modify'
+      })),
+      warnings: result.warnings || [],
+      dependencies: result.dependencies || []
     };
   },
 

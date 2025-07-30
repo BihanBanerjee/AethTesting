@@ -21,7 +21,7 @@ interface EnhancedResponseDisplayProps {
 const parseResponseIntoSections = (content: string): { summary: string; sections: ResponseSection[] } => {
   // Simple parsing logic - can be enhanced
   const lines = content.split('\n');
-  let sections: ResponseSection[] = [];
+  const sections: ResponseSection[] = [];
   let currentSection = '';
   let currentTitle = '';
   let sectionType: ResponseSection['type'] = 'details';
@@ -209,32 +209,36 @@ export const EnhancedResponseDisplay: React.FC<EnhancedResponseDisplayProps> = (
             className="bg-white/5 rounded-lg border border-white/10 overflow-hidden"
           >
             {/* Section Header */}
-            <button
-              onClick={() => toggleSection(index)}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
-            >
-              <div className="flex items-center gap-3">
+            <div className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+              <button
+                onClick={() => toggleSection(index)}
+                className="flex-1 flex items-center gap-3 text-left"
+              >
                 <SectionTypeIcon type={section.type} />
-                <h4 className="font-medium text-white text-left">{section.title}</h4>
+                <h4 className="font-medium text-white">{section.title}</h4>
                 <PriorityBadge priority={section.priority} />
-              </div>
+              </button>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopy(section.content, `section-${index}`);
-                  }}
+                  onClick={() => handleCopy(section.content, `section-${index}`)}
                   className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white/80"
+                  title="Copy section content"
                 >
                   <Copy className="h-3 w-3" />
                 </button>
-                {expandedSections.has(index) ? (
-                  <ChevronDown className="h-4 w-4 text-white/60" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-white/60" />
-                )}
+                <button
+                  onClick={() => toggleSection(index)}
+                  className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white/80"
+                  title="Toggle section"
+                >
+                  {expandedSections.has(index) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
               </div>
-            </button>
+            </div>
 
             {/* Section Content */}
             <AnimatePresence>

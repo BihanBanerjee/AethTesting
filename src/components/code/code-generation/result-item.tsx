@@ -47,8 +47,14 @@ export const ResultItem: React.FC<ResultItemProps> = ({
           </div>
         </div>
         
-        <p className="text-sm text-white/70 line-clamp-2">
-          {result.explanation}
+        <p className="text-sm text-white/70 line-clamp-2 whitespace-pre-line">
+          {result.explanation
+            .replace(/\\n/g, '\n')      // Convert \n to actual newlines
+            .replace(/\\r/g, '\r')      // Convert \r to carriage returns  
+            .replace(/\\t/g, '\t')      // Convert \t to tabs
+            .replace(/\\"/g, '"')       // Convert \" to quotes
+            .replace(/\\\\/g, '\\')     // Convert \\ to single backslash
+          }
         </p>
       </div>
 

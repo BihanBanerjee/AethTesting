@@ -3,12 +3,32 @@ import type { EnhancedResponse, IntentType, ApiMutations } from '../types/enhanc
 
 export function extractSimpleContent(result: any): string {
   if (typeof result === 'string') return result;
-  if (result.explanation) return String(result.explanation);
-  if (result.summary) return String(result.summary);
-  if (result.diagnosis) return String(result.diagnosis);
-  if (result.answer) return String(result.answer);
-  if (result.response) return String(result.response);
+  
+  // Handle unified response format first (prioritize actual content over explanations)
+  if (result.content && typeof result.content === 'string') {
+    return convertLiteralNewlines(result.content);
+  }
+  if (result.files && Array.isArray(result.files) && result.files[0]?.content) {
+    return convertLiteralNewlines(result.files[0].content);
+  }
+  if (result.generatedCode) {
+    return convertLiteralNewlines(String(result.generatedCode));
+  }
+  
+  // Legacy format fallbacks
+  if (result.improvedCode) return convertLiteralNewlines(String(result.improvedCode));  
+  if (result.answer) return convertLiteralNewlines(String(result.answer));
+  if (result.response) return convertLiteralNewlines(String(result.response));
+  if (result.summary) return convertLiteralNewlines(String(result.summary));
+  if (result.diagnosis) return convertLiteralNewlines(String(result.diagnosis));
+  if (result.explanation) return convertLiteralNewlines(String(result.explanation));
+  
   return JSON.stringify(result, null, 2);
+}
+
+// Helper function to convert literal \n characters to actual newlines
+function convertLiteralNewlines(text: string): string {
+  return text.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
 }
 
 function generateCodeSummary(result: any, question: string): string {
@@ -100,9 +120,9 @@ export async function routeIntentToHandler(
           dependencies: result.dependencies,
           files: result.files?.map((f: any) => f.path) || []
         },
-        filesReferences: result.generatedCode ? [{
-          fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.language === 'typescript' ? 'ts' : 'js'}`,
-          sourceCode: result.generatedCode,
+        filesReferences: (result.generatedCode || result.files?.[0]?.content) ? [{
+          fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.files?.[0]?.language || result.language || 'md'}`,
+          sourceCode: convertLiteralNewlines(result.generatedCode || result.files?.[0]?.content || ''),
           summary: generateCodeSummary(result, question)
         }] : []
       };
@@ -115,18 +135,23 @@ export async function routeIntentToHandler(
         improvementType: 'optimization'
       });
 
+      // Handle both unified and legacy response formats
+      const actualCode = result.generatedCode || result.improvedCode || result.files?.[0]?.content;
+      const actualLanguage = result.files?.[0]?.language || result.language || 'ts';
+      const actualFileName = result.files?.[0]?.path || `improved-${intent.targetFiles?.[0] || 'code'}.${actualLanguage}`;
+
       return {
         type: 'code',
         content: extractSimpleContent(result),
         intent,
         metadata: {
-          generatedCode: result.improvedCode,
+          generatedCode: actualCode,
           diff: result.diff,
           suggestions: result.suggestions
         },
-        filesReferences: result.improvedCode ? [{
-          fileName: `improved-${intent.targetFiles?.[0] || 'code'}.${result.language || 'ts'}`,
-          sourceCode: result.improvedCode,
+        filesReferences: actualCode ? [{
+          fileName: actualFileName,
+          sourceCode: convertLiteralNewlines(actualCode),
           summary: generateCodeSummary(result, question).replace(/component|function/, 'improved $&')
         }] : []
       };

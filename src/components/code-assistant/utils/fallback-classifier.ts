@@ -3,12 +3,13 @@ import type { QueryIntent } from '@/lib/intent-classifier';
 export function createFallbackIntent(query: string): QueryIntent {
   const lowerQuery = query.toLowerCase();
   
-  console.log('🎯 Using wrapper fallback classification for:', query.substring(0, 30) + '...');
+  console.log('🎯 Using enhanced fallback classification for:', query.substring(0, 30) + '...');
   
-  // Code generation patterns
+  // Enhanced code generation patterns
   if (matchesPatterns(lowerQuery, [
     'create', 'generate', 'write', 'build', 'implement', 'add new',
-    'make a', 'develop', 'code for', 'function that', 'component that'
+    'make a', 'develop', 'code for', 'function that', 'component that',
+    'scaffold', 'boilerplate', 'template', 'new file', 'starter'
   ])) {
     return {
       type: 'code_generation',
@@ -20,10 +21,11 @@ export function createFallbackIntent(query: string): QueryIntent {
     };
   }
 
-  // Code improvement patterns
+  // Enhanced code improvement patterns (especially for README/docs)
   if (matchesPatterns(lowerQuery, [
     'improve', 'optimize', 'enhance', 'better', 'performance',
-    'make faster', 'more efficient', 'cleaner', 'simplify'
+    'make faster', 'more efficient', 'cleaner', 'simplify',
+    'update', 'modernize', 'readme', 'documentation', 'docs'
   ])) {
     return {
       type: 'code_improvement',
@@ -107,5 +109,9 @@ export function createFallbackIntent(query: string): QueryIntent {
 }
 
 function matchesPatterns(text: string, patterns: string[]): boolean {
-  return patterns.some(pattern => text.includes(pattern));
+  return patterns.some(pattern => {
+    // Enhanced matching: check for whole words to reduce false positives
+    const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+    return regex.test(text) || text.includes(pattern);
+  });
 }

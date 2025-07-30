@@ -11,6 +11,7 @@ const detectLanguageFromFile = (filename?: string, prompt?: string): string => {
   // File extension mapping
   if (filename) {
     const ext = filename.split('.').pop()?.toLowerCase();
+    if (!ext) return 'typescript'; // Early return if no extension
     const mapping: Record<string, string> = {
       'md': 'markdown',
       'markdown': 'markdown',

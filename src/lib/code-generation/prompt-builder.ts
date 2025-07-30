@@ -74,7 +74,25 @@ Provide improvements focusing on:
 4. Security considerations
 5. Type safety (if applicable)
 
-IMPORTANT: Respond with ONLY a valid JSON object. Do not use backticks in the JSON values. Use \\n for line breaks in code.
+🚨 CRITICAL JSON FORMAT REQUIREMENTS - FAILURE TO FOLLOW WILL BREAK THE SYSTEM:
+
+1. ⭐ START IMMEDIATELY WITH: \`\`\`json
+2. ⭐ NO TEXT BEFORE \`\`\`json AT ALL
+3. ⭐ ESCAPE ALL QUOTES IN CONTENT: Use \\" not "
+4. ⭐ ESCAPE ALL NEWLINES: Use \\n not actual line breaks
+5. ⭐ ESCAPE ALL BACKSLASHES: Use \\\\ for literal backslashes  
+6. ⭐ END WITH: \`\`\` (no text after)
+
+🔥 SPECIAL ATTENTION FOR MARKDOWN CONTENT:
+- URLs with quotes: "Visit \\"https://example.com\\"" 
+- Badge markdown: "[![Title](url)](link)" becomes "[![Title](url)](link)"
+- All quotes inside content MUST be escaped as \\"
+
+CORRECT ESCAPING EXAMPLE:
+"content": "# Title\\n\\n[![Badge](https://img.shields.io/badge/Test-Badge-blue)](https://example.com)\\n\\nThis is a \\"quoted\\" word."
+
+🚨 WRONG: "content": "# Title\n\n[![Badge](https://img.shields.io/badge/Test-Badge-blue)](https://example.com)\n\nThis is a "quoted" word."
+✅ RIGHT: "content": "# Title\\n\\n[![Badge](https://img.shields.io/badge/Test-Badge-blue)](https://example.com)\\n\\nThis is a \\"quoted\\" word."
 
 \`\`\`json
 {

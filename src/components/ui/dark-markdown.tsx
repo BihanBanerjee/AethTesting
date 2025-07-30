@@ -16,6 +16,14 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
   content, 
   className = '' 
 }) => {
+  // Ensure content has proper newlines as a fallback safety measure
+  const processedContent = content
+    .replace(/\\n/g, '\n')      // Convert \n to actual newlines
+    .replace(/\\r/g, '\r')      // Convert \r to carriage returns
+    .replace(/\\t/g, '\t')      // Convert \t to tabs
+    .replace(/\\"/g, '"')       // Convert \" to quotes  
+    .replace(/\\\\/g, '\\');    // Convert \\ to single backslash
+
   return (
     <div className={`prose prose-invert prose-lg max-w-full break-words overflow-wrap-anywhere ${className}`}>
       <ReactMarkdown
@@ -141,7 +149,7 @@ export const DarkMarkdown: React.FC<DarkMarkdownProps> = ({
           ),
         }}
       >
-        {content}
+        {processedContent}
       </ReactMarkdown>
     </div>
   );

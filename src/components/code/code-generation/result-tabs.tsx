@@ -13,12 +13,17 @@ export const ResultTabs: React.FC<ResultTabsProps> = ({
     await onApplyChanges(result);
   };
 
+  // Determine the number of tabs to set the correct grid columns
+  const hasOriginalCode = !!result.originalCode;
+  const tabCount = hasOriginalCode ? 3 : 2;
+  const gridClass = hasOriginalCode ? 'grid-cols-3' : 'grid-cols-2';
+
   return (
     <div className="p-4 pt-0">
       <Tabs defaultValue="code" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className={`grid w-full ${gridClass}`}>
           <TabsTrigger value="code">Generated Code</TabsTrigger>
-          {result.originalCode && (
+          {hasOriginalCode && (
             <TabsTrigger value="diff">Diff View</TabsTrigger>
           )}
           <TabsTrigger value="explanation">Explanation</TabsTrigger>
@@ -53,9 +58,15 @@ export const ResultTabs: React.FC<ResultTabsProps> = ({
         <TabsContent value="explanation" className="mt-4">
           <div className="glassmorphism border border-white/20 p-4 rounded-lg">
             <h4 className="font-medium text-white mb-2">AI Explanation</h4>
-            <p className="text-white/80 text-sm leading-relaxed">
-              {result.explanation}
-            </p>
+            <div className="text-white/80 text-sm leading-relaxed whitespace-pre-line">
+              {result.explanation
+                .replace(/\\n/g, '\n')      // Convert \n to actual newlines
+                .replace(/\\r/g, '\r')      // Convert \r to carriage returns  
+                .replace(/\\t/g, '\t')      // Convert \t to tabs
+                .replace(/\\"/g, '"')       // Convert \" to quotes
+                .replace(/\\\\/g, '\\')     // Convert \\ to single backslash
+              }
+            </div>
             
             <SuggestionsList suggestions={result.suggestions} />
           </div>

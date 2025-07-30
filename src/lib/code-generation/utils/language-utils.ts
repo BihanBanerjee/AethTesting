@@ -13,7 +13,8 @@ interface CodingStandards {
   maxLineLength: number;
 }
 
-export function detectLanguage(fileName: string): string {
+export function detectLanguage(fileName: string | undefined): string {
+  if (!fileName) return 'text';
   const ext = fileName.split('.').pop()?.toLowerCase();
   const langMap: Record<string, string> = {
     'ts': 'typescript',

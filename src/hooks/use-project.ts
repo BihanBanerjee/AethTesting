@@ -2,6 +2,7 @@
 import { api } from '@/trpc/react'
 import { useUser } from '@clerk/nextjs'
 import { useLocalStorage } from 'usehooks-ts'
+import { useEffect } from 'react'
 
 const useProject = () => {
     const { user } = useUser()
@@ -18,10 +19,12 @@ const useProject = () => {
     const finalProject = project || projects?.[0]
     const finalProjectId = finalProject?.id || ''
     
-    // Update localStorage if we auto-selected a different project
-    if (finalProject && finalProject.id !== projectId) {
-        setProjectId(finalProject.id)
-    }
+    // Update localStorage if we auto-selected a different project - moved to useEffect
+    useEffect(() => {
+        if (finalProject && finalProject.id !== projectId) {
+            setProjectId(finalProject.id)
+        }
+    }, [finalProject?.id, projectId, setProjectId])
 
     return {
         projects,

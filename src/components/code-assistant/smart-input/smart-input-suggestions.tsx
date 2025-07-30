@@ -12,7 +12,7 @@ export const SmartInputSuggestions: React.FC<SmartInputSuggestionsProps> = ({
   onSuggestionSelect,
   projectContext
 }) => {
-  const { predictions, isAnalyzing } = useInputAnalysis(currentInput, projectContext);
+  const { predictions, isAnalyzing } = useInputAnalysis(currentInput);
 
   if (predictions.length === 0 || isAnalyzing) {
     return null;

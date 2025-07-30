@@ -13,10 +13,18 @@ export const GeneratedCodeSection: React.FC<GeneratedCodeSectionProps> = ({
   onCopy,
   onDownload
 }) => {
-  const handleCopy = () => onCopy(generatedCode);
+  // Unescape newlines and other escaped characters for proper display
+  const processedCode = generatedCode
+    .replace(/\\n/g, '\n')      // Convert \n to actual newlines
+    .replace(/\\r/g, '\r')      // Convert \r to carriage returns  
+    .replace(/\\t/g, '\t')      // Convert \t to tabs
+    .replace(/\\"/g, '"')       // Convert \" to quotes
+    .replace(/\\\\/g, '\\');    // Convert \\ to single backslash
+
+  const handleCopy = () => onCopy(processedCode);
   const handleDownload = () => {
     const filename = `generated-${intent}.${language === 'typescript' ? 'ts' : 'js'}`;
-    onDownload(generatedCode, filename);
+    onDownload(processedCode, filename);
   };
 
   return (
@@ -32,7 +40,7 @@ export const GeneratedCodeSection: React.FC<GeneratedCodeSectionProps> = ({
         />
       </div>
       <CodeBlock
-        code={generatedCode}
+        code={processedCode}
         language={language}
         actions={{
           copy: true,

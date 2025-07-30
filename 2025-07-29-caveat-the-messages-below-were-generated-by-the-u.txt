@@ -1,0 +1,2063 @@
+╭────────────────────────────────────────────────────────────────────╮
+│ ✻ Welcome to Claude Code!                                          │
+│                                                                    │
+│   /help for help, /status for your current setup                   │
+│                                                                    │
+│   cwd: /Users/bihanbanerjee/Desktop/Web2Projects/Testing/aetheria  │
+╰────────────────────────────────────────────────────────────────────╯
+
+> /clear 
+  ⎿  (no content)
+
+> Error: For code improvement requests, please use the Code Generation tab for better specialized 
+  tools and features.
+      at Object.routeIntentToAPI (http://localhost:3000/_next/static/chunks/src_8711f2d7._.js:8378:19)
+      at handleSendMessage (http://localhost:3000/_next/static/chunks/src_8711f2d7._.js:8513:47)
+
+  [Image #1]
+
+  Getting this error, why? I think previously I tried to make the code-assistant page simple and only 
+  allowed askQuestion route functionalities on this page.
+
+⏺ I need to examine the code to understand why you're getting this error. Let me look at the routing
+  logic and the code-assistant implementation.
+
+⏺ Read(src/hooks/code-assistant/use-api-routing.ts)
+  ⎿  Read 34 lines (ctrl+r to expand)
+
+⏺ I can see the issue! The code is intentionally throwing an error when code improvement requests are
+  detected. This was implemented to redirect users to the Code Generation tab, but it's causing a
+  runtime error instead of a user-friendly redirect.
+
+  Let me check how this error is being handled in the UI:
+
+⏺ Read(src/hooks/code-assistant/use-code-assistant.ts)
+  ⎿  Read 171 lines (ctrl+r to expand)
+
+⏺ I can see the issue now. The error is being thrown in the routeIntentToAPI function and caught in
+  the generic error handler on line 100-103, which shows a generic toast error instead of handling the
+   specific "redirect to Code Generation tab" message properly.
+
+  The issue is that you want to show a user-friendly message about using the Code Generation tab, but
+  instead it's being treated as a generic error. Let me fix this by improving the error handling:
+
+⏺ Update Todos
+  ⎿  ☐ Fix error handling for code intent redirection to show user-friendly message instead of generic
+       error
+
+⏺ Update Todos
+  ⎿  ☐ Fix error handling for code intent redirection to show user-friendly message instead of generic
+       error
+
+⏺ Now let me fix the error handling to properly handle this specific case:
+
+⏺ Update(src/hooks/code-assistant/use-api-routing.ts)
+  ⎿  Updated src/hooks/code-assistant/use-api-routing.ts with 4 additions and 2 removals              
+       15        const codeIntents = ['code_generation', 'code_improvement', 'code_review', 'debug', 
+            'explain', 'refactor'];
+       16        
+       17        if (codeIntents.includes(intent.type)) {
+       18 -        // Show user message about redirecting to Code Generation tab
+       19 -        throw new Error(`For ${intent.type.replace('_', ' ')} requests, please use the Code 
+     Generation tab for better specialized tools and features.`);
+          - Generation tab for better specialized tools and features.`);
+       18 +        // Create a special error type for code intent redirection
+       19 +        const error = new Error(`For ${intent.type.replace('_', ' ')} requests, please use 
+     the Code Generation tab for better specialized tools and features.`);
+          + the Code Generation tab for better specialized tools and features.`);
+       20 +        error.name = 'CodeIntentRedirectionError';
+       21 +        throw error;
+       22        }
+       23        
+       24        // Smart Chat only handles askQuestion for general queries
+
+⏺ Now let me update the error handling in the main hook to properly handle this specific error type:
+
+⏺ Update(src/hooks/code-assistant/use-code-assistant.ts)
+  ⎿  Updated src/hooks/code-assistant/use-code-assistant.ts with 28 additions and 11 removals         
+        99          
+       100        } catch (error) {
+       101          console.error('Error processing request:', error);
+       102 -        toast.error('Failed to process your request. Please try again.');
+       102          
+       103 -        processingState.setProcessingStage('error');
+       103 +        // Handle code intent redirection errors specifically
+       104 +        if (error instanceof Error && error.name === 'CodeIntentRedirectionError') {
+       105 +          toast.error(error.message);
+       106 +          
+       107 +          const redirectionMessage: Message = {
+       108 +            id: (Date.now() + 1).toString(),
+       109 +            type: 'assistant',
+       110 +            content: error.message,
+       111 +            intent: processingState.currentIntent,
+       112 +            timestamp: new Date()
+       113 +          };
+       114 +          
+       115 +          messageState.setMessages((prev: Message[]) => [...prev, redirectionMessage]);
+       116 +        } else {
+       117 +          // Handle other errors generically
+       118 +          toast.error('Failed to process your request. Please try again.');
+       119 +          
+       120 +          const errorMessage: Message = {
+       121 +            id: (Date.now() + 1).toString(),
+       122 +            type: 'assistant',
+       123 +            content: 'I encountered an error processing your request. Please try 
+     rephrasing
+           +  your question or check if the project is properly loaded.',
+       124 +            intent: processingState.currentIntent,
+       125 +            timestamp: new Date()
+       126 +          };
+       127 +          
+       128 +          messageState.setMessages((prev: Message[]) => [...prev, errorMessage]);
+       129 +        }
+       130          
+       131 -        const errorMessage: Message = {
+       132 -          id: (Date.now() + 1).toString(),
+       133 -          type: 'assistant',
+       134 -          content: 'I encountered an error processing your request. Please try rephrasing 
+           - your question or check if the project is properly loaded.',
+       135 -          intent: processingState.currentIntent,
+       136 -          timestamp: new Date()
+       137 -        };
+       138 -        
+       139 -        messageState.setMessages((prev: Message[]) => [...prev, errorMessage]);
+       131 +        processingState.setProcessingStage('error');
+       132        } finally {
+       133          messageState.setIsLoading(false);
+       134          messageState.setInput('');
+
+⏺ Update Todos
+  ⎿  ☒ Fix error handling for code intent redirection to show user-friendly message instead of generic
+       error
+
+⏺ The issue was that you implemented a restriction to prevent code improvement requests on the
+  code-assistant page (to redirect users to a Code Generation tab), but the error handling was
+  treating it as a generic error instead of showing the user-friendly redirection message.
+
+  I've fixed it by:
+
+  1. Creating a specific error type (CodeIntentRedirectionError) in use-api-routing.ts:19-21 to
+  distinguish redirection errors from other errors
+  2. Updating the error handler in use-code-assistant.ts:104-115 to specifically handle redirection
+  errors and show the proper message to users
+
+  Now when users try to ask code improvement questions, they'll see the proper message: "For code
+  improvement requests, please use the Code Generation tab for better specialized tools and features"
+  instead of a generic error.
+
+> /var/folders/w1/jd5f1bnd5t15kb6jhyj5fv640000gn/T/TemporaryItems/NSIRD_screencaptureui_cMFhe0/Screens
+  hot\ 2025-07-29\ at\ 9.11.54 PM.png [I
+  Now getting this. I dont want this. 
+
+  I want you to do a proper revamp of the code-assistant page. 
+  I want to make able to do all the things including code-generation, debugging, refactoring etc. etc.
+   not only askQuestion route, it should be made able to do all the functionings including all the 
+  things it used do warlier like all codegeneration, improvemnt, refactoring etc. etc.
+  I want it to make it as good as a baby version of chagpt in coding. (using the underlying geminin 
+  api obviously) It should be able to do anything a developer might ask it do through the 
+  code-assistant page.
+  ⎿  Interrupted by user
+
+> /var/folders/w1/jd5f1bnd5t15kb6jhyj5fv640000gn/T/TemporaryItems/NSIRD_screencaptureui_cMFhe0/Screens
+  hot\ 2025-07-29\ at\ 9.11.54 PM.png [I
+  Now getting this. I dont want this. 
+
+  I want you to do a proper revamp of the code-assistant page. 
+  I want to make able to do all the things including code-generation, debugging, refactoring etc. etc.
+   not only askQuestion route, it should be made able to do all the functionings including all the 
+  things it used do warlier like all codegeneration, improvemnt, refactoring etc. etc.
+  I want it to make it as good as a baby version of chagpt in coding. (using the underlying geminin 
+  api obviously) It should be able to do anything a developer might ask it do through the 
+  code-assistant page. You do a thorough investigation and give me a plan of what you will do and how 
+  will you do in a sequnetial manner.
+
+⏺ Read(../../../../../../var/folders/w1/jd5f1bnd5t15kb6jhyj5fv640000gn/T/TemporaryItems/NSIRD_screenca
+      ptureui_cMFhe0/Screenshot 2025-07-29 at 9.11.54 PM.png)
+  ⎿  Read image (544.2KB)
+
+⏺ I can see the issue - you're getting the redirection error message. I understand you want to revamp
+  the code-assistant page to handle all coding tasks instead of restricting it. Let me investigate the
+   current architecture to understand what needs to be restored and plan a comprehensive revamp.
+
+⏺ Task(Investigate code-assistant architecture)
+  ⎿  Done (23 tool uses · 45.9k tokens · 2m 6.6s)                                                     
+
+⏺ Perfect! Based on this thorough investigation, I can see that all the backend infrastructure is
+  already there - the code-assistant page was artificially restricted. Here's my detailed plan to
+  revamp it into a full-featured coding assistant:
+
+⏺ Update Todos
+  ⎿  ☐ Remove artificial restrictions in use-api-routing.ts to allow all coding intents           
+     ☐ Implement comprehensive intent routing similar to dashboard version
+     ☐ Add all missing tRPC mutations (generateCode, improveCode, reviewCode, debugCode, etc.)
+     ☐ Test all restored functionalities to ensure they work properly
+     ☐ Update message display components to handle different response types (code, reviews, debug)
+     ☐ Add specialized UI elements for different intent types
+     ☐ Run lint and typecheck to ensure code quality
+
+⏺ Complete Revamp Plan for Code-Assistant Page
+
+  Current Situation:
+
+  The code-assistant page has all the backend infrastructure (tRPC procedures, AI services, intent
+  classification) but is artificially restricted to only handle askQuestion. The dashboard version has
+   full capabilities that we need to restore.
+
+  Sequential Implementation Plan:
+
+  Phase 1: Remove Restrictions & Restore Core Routing
+
+  1. Remove artificial intent blocking in use-api-routing.ts
+  2. Implement comprehensive intent routing (similar to dashboard)
+  3. Add all missing tRPC mutations (generateCode, improveCode, reviewCode, debugCode, refactorCode,
+  explainCode)
+
+  Phase 2: Response Handling & UI Updates
+
+  4. Update message display to handle different response types (code blocks, reviews, debug info)
+  5. Add specialized UI elements for different intents (code editors, diff viewers, etc.)
+
+  Phase 3: Testing & Quality Assurance
+
+  6. Test all restored functionalities with different types of queries
+  7. Run lint and typecheck to ensure code quality
+
+  Available Backend Capabilities (Already Implemented):
+
+  ✅ Code Generation - Creates new code/components with requirements✅ Code Improvement - Optimizes
+  existing code for performance/readability✅ Code Review - Security, performance, and general code
+  analysis✅ Debug Assistance - AI-powered bug fixing with root cause analysis✅ Code Refactoring -
+  Restructures code while preserving functionality✅ Code Explanation - Explains code with
+  configurable detail levels✅ Intent Classification - Intelligent query understanding✅ Vector Search
+   - Semantic code understanding✅ Analytics & Metadata - Tracks interactions and feedback
+
+  What Will Be Restored:
+
+  - Full ChatGPT-like coding experience using the underlying Gemini API
+  - Multi-modal responses (text + code + explanations + metadata)
+  - Context-aware suggestions based on project files
+  - Real-time streaming responses for better UX
+  - Specialized handling for each intent type
+  - Professional code highlighting and formatting
+  ⎿  User rejected Claude's plan:
+     ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+     │ Code-Assistant Revamp Plan                                                                    │
+     │                                                                                               │
+     │ Goal: Transform the code-assistant page into a full-featured coding assistant capable of code │
+     │ generation, debugging, refactoring, and more.                                                 │
+     │                                                                                               │
+     │ Phase 1: Core Restoration                                                                     │
+     │                                                                                               │
+     │ 1. Remove artificial restrictions in use-api-routing.ts                                       │
+     │ 2. Implement comprehensive intent routing (like dashboard version)                            │
+     │ 3. Add all missing tRPC mutations for code generation, improvement, review, debug, refactor,  │
+     │ explain                                                                                       │
+     │                                                                                               │
+     │ Phase 2: UI Enhancement                                                                       │
+     │                                                                                               │
+     │ 4. Update message display to handle different response types                                  │
+     │ 5. Add specialized UI elements for different coding intents                                   │
+     │                                                                                               │
+     │ Phase 3: Quality Assurance                                                                    │
+     │                                                                                               │
+     │ 6. Test all restored functionalities                                                          │
+     │ 7. Run lint and typecheck                                                                     │
+     │                                                                                               │
+     │ Backend Infrastructure: Already complete with tRPC procedures, AI services, and intent        │
+     │ classification. Just need to remove frontend restrictions and restore full routing            │
+     │ capabilities.                                                                                 │
+     ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+> > these files
+    enhanced-code-indexer.ts and
+    diff-generator.ts
+    are not being used in the codebase, right?
+
+    - enhanced-code-indexer.ts - No imports found
+    - diff-generator.ts - No imports found
+
+    The grep search shows only the files themselves contain these names, but no other files import or
+    reference them.
+
+    These appear to be orphaned/unused files that can be safely removed. They're likely leftover code
+    from earlier development that has been superseded by other implementations.
+
+    Recommendation: Delete both files to clean up the codebase.
+
+    Should I remove them?
+
+  > what do you think what were the purpose for creation of these files? Do we have any other file in
+    our codebase that servers the purpose of these two files. if no then how can we better and utilise
+    these two files in our codebase?
+
+  ✻ Thinking…
+
+    The user is asking me to analyze these two files to understand:
+    1. What was their original purpose?
+    2. Do we have other files that serve similar purposes?
+    3. How could we potentially utilize them in the codebase?
+
+    Let me examine these files more closely to understand their functionality and see if there are
+    opportunities to integrate them into the existing codebase.
+
+  ✻ Thinking…
+
+    Looking at the enhanced-code-indexer.ts file, I can see it's designed for advanced code analysis:
+
+    1. It extracts code chunks (functions, classes, interfaces, components, hooks, etc.)
+    2. It analyzes dependencies, imports, exports
+    3. It calculates complexity and maintainability metrics
+    4. It supports multiple languages (TypeScript, JavaScript, Python)
+    5. It uses Babel parser for JS/TS and TypeScript compiler API
+    6. It integrates with AI (generateEmbedding, summariseCode) and database storage
+
+    This is much more sophisticated than the basic indexing we saw in the modularized github code. Let
+    me continue reading to see more functionality.
+
+  ✻ Thinking…
+
+    I can see this is doing sophisticated AST (Abstract Syntax Tree) parsing of JavaScript/TypeScript
+    code to extract:
+
+    1. Import declarations
+    2. Export declarations (default and named)
+    3. Function declarations
+    4. And likely classes, interfaces, etc.
+
+    This is much more advanced than the basic file indexing I saw in the existing codebase. Let me
+    continue reading to see the complete functionality and then look at the diff-generator file.
+
+  ✻ Thinking…
+
+    Now I'm seeing the diff-generator.ts file. This appears to be for generating detailed file diffs
+    with:
+
+    1. Unified diff format
+    2. Diff hunks (sections of changes)
+    3. Line-by-line analysis (additions, deletions, context)
+    4. Statistics (insertions, deletions, total changes)
+
+    This is much more sophisticated than basic git commit diffs. Let me see what functionality we have
+    in the existing codebase and then provide a comprehensive analysis.
+
+  ✻ Thinking…
+
+    Let me check what the current repo indexer looks like to compare functionality.
+
+  ✻ Thinking…
+
+    Now I can see the current repo indexer is quite basic - it just processes documents in batches and
+    saves them to the database. Let me also check if there's any diff functionality in the commit
+    handling code.
+
+  ✻ Thinking…
+
+    Perfect! Now I have enough information to provide a comprehensive analysis. Let me analyze what
+    these files were intended for and how they could be utilized.
+
+    Analysis of the Files:
+
+    enhanced-code-indexer.ts:
+
+    - Purpose: Advanced AST-based code analysis
+    - Features:
+      - Extracts code chunks (functions, classes, interfaces, components, hooks)
+      - Analyzes dependencies, imports, exports
+      - Calculates complexity and maintainability metrics
+      - Supports multiple languages (TypeScript, JavaScript, Python)
+      - Uses Babel parser and TypeScript compiler API
+      - Integrates with AI for code summarization
+
+    diff-generator.ts:
+
+    - Purpose: Advanced diff generation and analysis
+    - Features:
+      - Creates unified diffs
+      - Analyzes diff hunks and line-by-line changes
+      - Provides detailed statistics (insertions, deletions)
+      - Much more sophisticated than the basic GitHub commit diff extraction
+
+    Current Codebase Gaps:
+
+    Basic Code Indexing:
+
+    The current RepoIndexer is quite basic - it just processes documents in batches and generates
+    embeddings. It doesn't do any sophisticated code analysis.
+
+    Basic Diff Handling:
+
+    The current commit diff extraction just gets raw GitHub patch data (commitData.files?.map(file =>
+    file.patch)). It doesn't provide structured diff analysis.
+
+    Integration Opportunities:
+
+    These files could significantly enhance the platform's capabilities in several areas:
+
+    1. Enhanced Code Understanding: Better code analysis for more intelligent Q&A
+    2. Advanced Diff Analysis: Better commit analysis and code review features
+    3. Code Quality Metrics: Complexity and maintainability insights
+    4. Intelligent Code Navigation: Better understanding of code structure and relationships
+
+    Let me provide specific recommendations for how to integrate these.
+
+  ⏺ Based on my analysis, these files represent significant untapped potential for enhancing 
+  Aetheria's
+    capabilities. Here's what they were intended for and how they could be utilized:
+
+    Analysis of Original Purposes:
+
+    enhanced-code-indexer.ts - Advanced Code Analysis Engine
+
+    Purpose: Sophisticated AST-based code analysis that goes far beyond basic file indexing.
+
+    Key Features:
+    - Code Structure Analysis: Extracts functions, classes, interfaces, components, hooks
+    - Dependency Mapping: Tracks imports, exports, and relationships between files
+    - Code Metrics: Calculates complexity and maintainability indices
+    - Multi-language Support: TypeScript, JavaScript, Python with room for more
+    - AI Integration: Uses Babel parser + TypeScript compiler for deep code understanding
+
+    diff-generator.ts - Advanced Diff Analysis Engine
+
+    Purpose: Structured diff generation with detailed analysis capabilities.
+
+    Key Features:
+    - Unified Diff Generation: Professional-grade diff formatting
+    - Hunk Analysis: Breaks changes into logical sections
+    - Line-by-line Tracking: Precise change attribution
+    - Statistics: Insertions, deletions, change metrics
+    - Much more sophisticated than current basic GitHub patch extraction
+
+    ---
+    Current Codebase Gaps:
+
+    Basic Code Indexing:
+
+    Your current RepoIndexer is quite basic:
+    // Current: Just processes documents and generates embeddings
+    const results = await this.processDocumentsInBatches(docs);
+
+    Basic Diff Handling:
+
+    Your current commit processing just extracts raw patches:
+    // Current: Basic GitHub patch extraction
+    const diff = commitData.files?.map(file => `--- ${file.filename}\n${file.patch || 
+  ''}`).join('\n\n')
+     || '';
+
+    ---
+    Integration Opportunities - High Value Enhancements:
+
+    1. Enhanced Code Assistant (Major Upgrade)
+
+    // Instead of basic file indexing, use sophisticated code analysis
+    const codeAnalysis = await enhancedIndexer.analyzeFile(document);
+    // Now you know: functions, classes, complexity, dependencies
+
+    Benefits:
+    - Smarter Q&A: "What functions in this component handle user input?"
+    - Code Quality Insights: "Which files have the highest complexity?"
+    - Dependency Analysis: "What components depend on this utility?"
+
+    2. Advanced Commit Analysis (Major Enhancement)
+
+    // Instead of basic patch text, get structured diff analysis
+    const structuredDiff = diffGenerator.generateFileDiff(filename, oldContent, newContent);
+    // Now you have: precise hunks, statistics, line-by-line changes
+
+    Benefits:
+    - Better Commit Summaries: AI can understand structural changes vs text changes
+    - Code Review Features: "This change increases complexity by 15%"
+    - Impact Analysis: "These changes affect 3 dependent components"
+
+    3. Code Quality Dashboard (New Feature)
+
+    // Analyze entire codebase for quality metrics
+    const qualityReport = await generateCodeQualityReport(projectId);
+
+    Benefits:
+    - Maintainability Scoring: Track code health over time
+    - Hotspot Detection: Identify complex/problematic areas
+    - Refactoring Suggestions: AI-powered improvement recommendations
+
+    4. Intelligent Code Navigation (Enhancement)
+
+    // Build dependency graph for smarter navigation
+    const dependencyMap = await buildProjectDependencyGraph(projectId);
+
+    Benefits:
+    - Smart Search: "Find all components that use this hook"
+    - Impact Assessment: "What breaks if I change this interface?"
+    - Architecture Insights: Visual dependency mapping
+
+    ---
+    Recommendation: Integrate Both Files
+
+    These files could transform Aetheria from a basic code Q&A tool into a comprehensive code
+    intelligence platform.
+
+    High-Impact Integration Plan:
+    1. Phase 1: Replace basic RepoIndexer with EnhancedCodeIndexer
+    2. Phase 2: Enhance commit analysis with DiffGenerator
+    3. Phase 3: Build code quality dashboard using the metrics
+    4. Phase 4: Add intelligent code navigation features
+
+    ROI: These enhancements would significantly differentiate Aetheria from basic "chat with your 
+  code"
+    tools by providing deep code intelligence.
+
+    Should we proceed with integrating these capabilities?
+
+  > with EnhancedCodeIndexer, will we still be store the vector embedds of the code files?
+
+  ⏺ Great question! Let me examine the EnhancedCodeIndexer more closely to see how it handles
+    embeddings:
+
+  ⏺ Read(src/lib/enhanced-code-indexer.ts)
+    ⎿  Read 100 lines (ctrl+r to expand)
+    ⎿  Invalid tool parameters
+
+  ⏺ Search(pattern: "generateEmbedding|embedding|vector", path: "src/lib/enhanced-code-indexer.ts",
+          output_mode: "content")
+    ⎿  Found 3 lines (ctrl+r to expand)
+
+  ⏺ Let me look at the full embedding generation logic:
+
+  ⏺ Read(src/lib/enhanced-code-indexer.ts)
+    ⎿  Read 50 lines (ctrl+r to expand)
+
+  ⏺ Read(src/lib/enhanced-code-indexer.ts)
+    ⎿  Read 9 lines (ctrl+r to expand)
+
+  ⏺ Perfect! To answer your question: Yes, the EnhancedCodeIndexer does store vector embeddings, but 
+  in
+    a much more sophisticated way!
+
+    Embedding Strategy Comparison:
+
+    Current Basic Indexer:
+
+    // Simple: One embedding per file
+    const embedding = await generateEmbedding(summary);
+    await db.sourceCodeEmbedding.create({
+      fileName: doc.metadata.source,
+      sourceCode: doc.pageContent, // Raw file content
+      summary: summary,             // Basic AI summary
+      projectId
+    });
+
+    Enhanced Code Indexer:
+
+    // Advanced: Multiple embeddings per file with structured metadata
+    // 1. FILE-LEVEL embedding with metadata
+    const fileEmbedding = await generateEmbedding(
+      `File: ${analysis.fileName}
+       Language: ${analysis.language}
+       Complexity: ${analysis.complexity}
+       Exports: ${analysis.exports.join(', ')}
+       Imports: ${analysis.imports.join(', ')}`
+    );
+
+    // 2. CHUNK-LEVEL embeddings for each function/class/component
+    for (const chunk of analysis.chunks) {
+      const chunkEmbedding = await generateEmbedding(chunkSummary);
+      // Store with rich metadata: type, dependencies, line numbers, etc.
+    }
+
+    Key Improvements:
+
+    1. Granular Embeddings
+
+    - Current: 1 embedding per file
+    - Enhanced: Multiple embeddings per file (file-level + each function/class/component)
+
+    2. Structured Metadata
+
+    - Current: Raw file content + basic summary
+    - Enhanced: Rich metadata (complexity, dependencies, exports, imports, code type)
+
+    3. Better Search Precision
+
+    - Current: "Find files about authentication"
+    - Enhanced: "Find React components that handle authentication" or "Find utility functions with 
+  high
+    complexity"
+
+    4. Code-Aware Context
+
+    // Enhanced indexer stores structured data like:
+    {
+      fileName: "UserAuth.tsx:handleLogin",
+      sourceCode: JSON.stringify({
+        content: "function handleLogin(credentials) { ... }",
+        type: "function",
+        dependencies: ["useState", "useCallback"],
+        exports: ["handleLogin"],
+        startLine: 25,
+        endLine: 45
+      }),
+      summary: "Authentication function that validates user credentials..."
+    }
+
+    Vector Search Benefits:
+
+    Semantic + Structural Search
+
+    // Query: "Find React hooks for form validation"
+    // Enhanced indexer can match:
+    // - Semantic: "validation", "form"
+    // - Structural: type="hook", dependencies=["useState", "useForm"]
+
+    Code Intelligence
+
+    // Query: "What components use the UserAuth hook?"
+    // Enhanced indexer finds:
+    // - All chunks with type="component"
+    // - That have dependencies=["UserAuth"]
+    // - With precise line number references
+
+    Database Storage Strategy:
+
+    The enhanced indexer actually creates more embeddings but with much richer context, enabling:
+
+    1. File-level semantic search (architecture understanding)
+    2. Function-level precise search (implementation details)
+    3. Dependency-aware search (relationship understanding)
+    4. Complexity-based filtering (quality insights)
+
+    Result: Better vector search quality while maintaining the embedding-based semantic search you
+    already have, but with much more precision and context-awareness.
+
+  > is this file specifically benifitial for ts and js files. what if I want to support js, ts, rust, 
+    solidity, python, C++ etc. etc. can it be made more generic? just answer me no need to do any code
+   
+    changes in the file.
+
+  ⏺ Looking at the enhanced-code-indexer.ts file, it's currently heavily specialized for 
+    JavaScript/TypeScript and would need significant changes to support multiple languages 
+  generically.
+
+    Current Language-Specific Dependencies:
+
+    1. @babel/parser - JS/TS specific AST parser
+    2. @babel/traverse - JS/TS specific AST traversal
+    3. Hardcoded JS/TS concepts - functions, classes, imports, exports
+    4. Language-specific patterns - React components, Node.js modules
+
+    To Make It Generic, You'd Need:
+
+    1. Multi-Language Parser Strategy
+
+    - Tree-sitter (universal parser) OR
+    - Language-specific parsers (rust-analyzer for Rust, solidity parser, etc.)
+    - Parser factory pattern to route by file extension
+
+    2. Abstract Syntax Representation
+
+    - Common interface for different language constructs
+    - Map language-specific concepts (Rust traits → interfaces, Solidity contracts → classes)
+
+    3. Language-Agnostic Analysis
+
+    Languages → Generic Concepts
+    - Functions/Methods → Callable entities
+    - Classes/Structs/Contracts → Type definitions
+    - Imports/Uses/Includes → Dependencies
+    - Variables → Identifiers
+
+    4. Configuration-Driven Approach
+
+    - Language definitions with file extensions, keywords, patterns
+    - Pluggable analyzers for each language
+    - Common metadata extraction interface
+
+    Verdict:
+
+    Yes, it can be made generic but would require a complete architectural redesign. The current
+    implementation is a JS/TS-specific indexer that would need to be abstracted into a multi-language
+    code analysis framework. Consider using existing tools like tree-sitter or GitHub's semantic for
+    true language-agnostic parsing.
+
+  > So, to make it generic what do you suggest?
+
+  ⏺ Here's my recommended approach to make the code indexer truly generic:
+
+    🎯 Recommended Architecture
+
+    1. Use Tree-sitter as the Foundation
+
+    - Why: Universal parser supporting 40+ languages with consistent AST
+    - Benefit: Single parsing interface for all languages
+    - Languages: JS/TS, Rust, Python, C++, Solidity, Go, etc.
+
+    2. Layered Architecture
+
+    ┌─────────────────────────────────┐
+    │     Generic Code Indexer        │
+    ├─────────────────────────────────┤
+    │   Language Abstraction Layer    │
+    ├─────────────────────────────────┤
+    │    Language-Specific Adapters   │
+    ├─────────────────────────────────┤
+    │       Tree-sitter Parsers       │
+    └─────────────────────────────────┘
+
+    3. Core Components
+
+    A. Language Registry
+
+    interface LanguageConfig {
+      extensions: string[];
+      treeSitterGrammar: string;
+      adapter: LanguageAdapter;
+      features: LanguageFeatures;
+    }
+
+    B. Universal AST Interface
+
+    interface CodeEntity {
+      type: 'function' | 'class' | 'variable' | 'import' | 'type';
+      name: string;
+      location: Location;
+      metadata: Record<string, any>;
+    }
+
+    C. Language Adapters
+
+    - JSAdapter: Functions, classes, imports → CodeEntity
+    - RustAdapter: Functions, structs, traits, mods → CodeEntity
+    - PythonAdapter: Functions, classes, imports → CodeEntity
+    - SolidityAdapter: Contracts, functions, events → CodeEntity
+
+    4. Implementation Strategy
+
+    Phase 1: Core Framework
+
+    1. Replace Babel with Tree-sitter
+    2. Create generic AST → CodeEntity mapping
+    3. Build language adapter interface
+
+    Phase 2: Language Support
+
+    1. Start with JS/TS (easiest migration)
+    2. Add Python, Rust (good Tree-sitter support)
+    3. Expand to C++, Solidity, Go
+
+    Phase 3: Advanced Features
+
+    1. Cross-language dependency analysis
+    2. Language-specific semantic understanding
+    3. AI-powered code relationship mapping
+
+    5. Alternative: Hybrid Approach
+
+    If full rewrite is too much:
+
+    A. Pluggable Parser System
+
+    - Keep current Babel for JS/TS
+    - Add Tree-sitter for other languages
+    - Route by file extension
+
+    B. Incremental Migration
+
+    - Extract current JS/TS logic into JSTypeScriptAdapter
+    - Build generic interface around it
+    - Add new language adapters gradually
+
+    6. External Tools to Consider
+
+    A. GitHub Semantic (recommended)
+
+    - Battle-tested multi-language parser
+    - Handles complex language semantics
+    - Open source, well-maintained
+
+    B. Sourcegraph's Universal Code Search
+
+    - Proven at scale
+    - Multi-language semantic analysis
+    - Could inspire architecture
+
+    7. Quick Win: Configuration-Driven
+
+    Immediate improvement without full rewrite:
+    const LANGUAGE_CONFIGS = {
+      javascript: { parser: 'babel', analyzer: 'js' },
+      typescript: { parser: 'babel', analyzer: 'ts' },
+      rust: { parser: 'tree-sitter', analyzer: 'rust' },
+      python: { parser: 'tree-sitter', analyzer: 'python' }
+    };
+
+    🎯 My Recommendation
+
+    Start with Tree-sitter + Adapter pattern:
+    1. Fastest path to multi-language support
+    2. Proven technology (used by GitHub, VS Code)
+    3. Consistent AST across all languages
+    4. Active ecosystem with good language grammars
+
+    This gives you a solid foundation that can evolve into a sophisticated multi-language code 
+  analysis
+    platform.
+
+  > in this case, will it be able to serve other purposes of current file like 
+    1. File-level semantic search (architecture understanding)
+      2. Function-level precise search (implementation details)
+      3. Dependency-aware search (relationship understanding)
+      4. Complexity-based filtering (quality insights)
+
+    and 
+
+    1. FILE-LEVEL embedding with metadata
+      const fileEmbedding = await generateEmbedding(
+        `File: ${analysis.fileName}
+         Language: ${analysis.language}
+         Complexity: ${analysis.complexity}
+         Exports: ${analysis.exports.join(', ')}
+         Imports: ${analysis.imports.join(', ')}`
+      );
+
+      // 2. CHUNK-LEVEL embeddings for each function/class/component
+      for (const chunk of analysis.chunks) {
+        const chunkEmbedding = await generateEmbedding(chunkSummary);
+        // Store with rich metadata: type, dependencies, line numbers, etc.
+      }
+
+  ⏺ Yes, absolutely! A generic Tree-sitter based approach can serve all those purposes even better 
+  than
+    the current JS/TS-specific implementation. Here's how:
+
+    🎯 Enhanced Capabilities with Generic Approach
+
+    1. File-level Semantic Search ✅ IMPROVED
+
+    // Works across ALL languages
+    const fileEmbedding = await generateEmbedding(
+      `File: ${analysis.fileName}
+       Language: ${analysis.language}  // rust, python, solidity, etc.
+       Complexity: ${analysis.complexity}
+       Exports: ${analysis.exports.join(', ')}  // functions, classes, contracts
+       Imports: ${analysis.dependencies.join(', ')}  // modules, crates, packages
+       Patterns: ${analysis.patterns.join(', ')}  // traits, interfaces, inheritance`
+    );
+
+    2. Function-level Precise Search ✅ ENHANCED
+
+    // Universal across languages
+    for (const entity of analysis.entities) {
+      const entityEmbedding = await generateEmbedding(
+        `${entity.type}: ${entity.name}  // function, method, contract, trait
+         Language: ${analysis.language}
+         Parameters: ${entity.parameters}
+         Returns: ${entity.returnType}
+         Complexity: ${entity.complexity}
+         Dependencies: ${entity.dependencies}`
+      );
+    }
+
+    3. Dependency-aware Search ✅ MASSIVELY IMPROVED
+
+    Tree-sitter gives you superior dependency analysis:
+    - Rust: use, mod, crate dependencies
+    - Python: import, from, package structure
+    - Solidity: import, inheritance, interface implementations
+    - C++: #include, namespace usage
+    - Cross-language: API calls between different services
+
+    4. Complexity-based Filtering ✅ MORE SOPHISTICATED
+
+    Generic approach enables language-specific complexity metrics:
+    - Cyclomatic complexity (universal)
+    - Rust: Lifetime complexity, ownership patterns
+    - Solidity: Gas complexity, security patterns
+    - Python: Decorator complexity, async patterns
+    - C++: Template complexity, memory management
+
+    🚀 Actually Gets You MORE Advanced Features
+
+    A. Cross-Language Code Understanding
+
+    // Find all functions that call this Rust API from JS
+    const crossLangSearch = await searchEmbeddings(
+      "JavaScript functions calling Rust WASM exports"
+    );
+
+    B. Language-Specific Semantic Patterns
+
+    const languagePatterns = {
+      rust: ['ownership_transfer', 'lifetime_management', 'trait_impl'],
+      solidity: ['reentrancy_guard', 'access_control', 'gas_optimization'],
+      python: ['async_await', 'context_manager', 'decorator_pattern']
+    };
+
+    C. Multi-Language Architecture Analysis
+
+    // Understand full-stack architecture
+    const archAnalysis = {
+      frontend: jsAnalysis,     // React components
+      backend: rustAnalysis,    // API endpoints  
+      blockchain: solidityAnalysis, // Smart contracts
+      ml: pythonAnalysis        // Data processing
+    };
+
+    🎯 Migration Path Preserves Everything
+
+    Phase 1: Enhanced Current Features
+
+    - File-level embeddings ✅ (but for all languages)
+    - Chunk-level embeddings ✅ (functions, classes, contracts)
+    - Dependency mapping ✅ (more accurate with Tree-sitter)
+    - Complexity analysis ✅ (language-aware metrics)
+
+    Phase 2: New Capabilities
+
+    - Cross-language search: Find Python functions calling Rust APIs
+    - Architecture-level insights: Full-stack dependency mapping
+    - Security pattern detection: Language-specific vulnerability patterns
+    - Performance analysis: Language-optimized complexity metrics
+
+    💡 Key Insight
+
+    The generic approach amplifies your current capabilities because:
+
+    1. Better AST quality: Tree-sitter gives more accurate parsing than Babel
+    2. Richer metadata: Language-specific semantic information
+    3. Cross-language insights: Understanding relationships between different codebases
+    4. Future-proof: Easy to add new languages as your stack evolves
+
+    Bottom line: You get everything you have now, but better and for all languages, plus capabilities
+    that are impossible with a JS/TS-only approach.
+
+  Do a thorough investigation and give me a plan crafted with minute detailings to implement the above
+   suggestions. Don't hurry I want you to plan iteratively to bring in all the advancements and 
+  improvements. Plan with geat attention and no need to hurry. 
+
+  I know this will make my currnet ptoject 100x.
+
+✻ Thinking…
+
+  The user wants me to do a thorough investigation and create a detailed plan to implement the generic
+   code indexer using Tree-sitter. They want minute details and iterative planning to bring in all the
+   advancements. They're emphasizing this is a major enhancement that will make their project "100x" 
+  better.
+
+  I should:
+  1. Do a comprehensive investigation of the current codebase structure
+  2. Understand how the current indexing system works
+  3. Analyze the enhanced-code-indexer.ts file in detail
+  4. Research Tree-sitter and its capabilities
+  5. Create a detailed, phased implementation plan
+  6. Consider all integration points with the existing system
+  7. Plan for backward compatibility
+  8. Consider testing strategies
+  9. Plan for gradual rollout
+
+  Let me start with a thorough investigation.
+
+⏺ Task(Comprehensive codebase investigation)
+  ⎿  Done (24 tool uses · 49.6k tokens · 2m 50.6s)                                                    
+
+✻ Thinking…
+
+  Excellent! I now have a comprehensive understanding of the current system. Let me analyze this 
+  information and create a detailed implementation plan. Based on the investigation, I can see:
+
+  1. Current System Strengths:
+    - Solid database schema with vector embeddings
+    - Good AI integration with Gemini
+    - Robust background processing with Inngest
+    - Rich metadata storage and analytics
+    - Modular service architecture
+  2. Current Limitations:
+    - Basic RepoIndexer (file-level only, no AST parsing)
+    - Enhanced indexer exists but unused (JS/TS specific with Babel)
+    - Limited language support (mostly JS/TS/Python with regex)
+    - No cross-language dependency analysis
+  3. Architecture Opportunities:
+    - Can build on existing vector search infrastructure
+    - Can leverage existing AI services and background job system
+    - Can enhance current database schema incrementally
+    - Can integrate with existing intent classification and code generation
+
+  Now I'll create a comprehensive, phased implementation plan that builds on these strengths while 
+  addressing the limitations.
+
+⏺ Now let me create a comprehensive, detailed implementation plan based on this investigation:
+
+⏺ Update Todos
+  ⎿  ☐ Phase 1: Foundation - Research Tree-sitter integration and design generic architecture
+     ☐ Phase 2: Core Framework - Build generic language abstraction layer
+     ☐ Phase 3: Language Adapters - Implement JS/TS adapter first, then expand
+     ☐ Phase 5: Integration - Replace current indexer with generic version
+     ☐ Phase 7: Testing & Optimization - Comprehensive testing and performance tuning
+     ☐ Phase 4: Database Enhancement - Extend schema for multi-language metadata
+     ☐ Phase 6: Advanced Features - Cross-language analysis and insights
+
+✻ Thinking…
+
+  Now I need to create a comprehensive, detailed implementation plan. Based on the investigation, I 
+  understand:
+
+  1. Current system has good infrastructure (database, AI services, background jobs)
+  2. Enhanced code indexer exists but is JS/TS specific and unused
+  3. Need to build generic multi-language system using Tree-sitter
+  4. Should preserve all existing capabilities while adding new ones
+  5. Need to be careful about backward compatibility and gradual migration
+
+  Let me structure this as a detailed, phased plan with specific implementation details for each 
+  phase.
+
+⏺ 🚀 Comprehensive Implementation Plan: Generic Multi-Language Code Indexer
+
+  Based on my thorough investigation, here's a detailed, iterative plan to transform Aetheria into a
+  100x more powerful code intelligence platform:
+
+  📋 Current System Analysis Summary
+
+  Strengths to Build Upon:
+  - ✅ Solid vector embedding infrastructure (PostgreSQL + 768-dim vectors)
+  - ✅ Robust AI integration (Gemini API with rate limiting)
+  - ✅ Scalable background processing (Inngest with batch processing)
+  - ✅ Rich database schema with analytics tracking
+  - ✅ Comprehensive AI code services (generation, review, debug, etc.)
+
+  Critical Gaps to Address:
+  - ❌ Basic file-level indexing only (no AST parsing)
+  - ❌ Limited language support (JS/TS/Python with regex)
+  - ❌ Enhanced indexer exists but unused and JS/TS specific
+  - ❌ No cross-language dependency analysis
+  - ❌ Missing fine-grained code entity extraction
+
+  ---
+  🎯 Phase 1: Foundation & Research
+
+  Duration: 1-2 weeks
+
+  1.1 Tree-sitter Integration Research
+
+⏺ Update Todos
+  ⎿  ☐ Research Tree-sitter node bindings and setup requirements           
+     ☐ Identify target languages and their Tree-sitter grammar availability
+     ☐ Create proof-of-concept Tree-sitter parser for TypeScript
+     ☐ Benchmark Tree-sitter vs current Babel performance
+
+✻ Thinking…
+
+  I should make this plan comprehensive but organized. Let me continue building the detailed plan 
+  phase by phase, making sure each phase has specific tasks, implementation details, and success 
+  criteria.
+
+⏺ Target Languages Priority:
+  const LANGUAGE_PRIORITIES = {
+    tier1: ['typescript', 'javascript', 'python'],    // Core web dev stack
+    tier2: ['rust', 'go', 'java'],                    // Popular backend languages  
+    tier3: ['solidity', 'cpp', 'c', 'php'],          // Specialized/legacy
+    tier4: ['ruby', 'kotlin', 'swift', 'dart']       // Platform-specific
+  };
+
+  Tree-sitter Setup:
+  - Package: web-tree-sitter for Node.js integration
+  - WASM Parsers: Download .wasm grammar files for each language
+  - Grammar Sources: Official Tree-sitter organization + community grammars
+
+  1.2 Architecture Design
+
+  Generic Code Entity Interface:
+  interface CodeEntity {
+    // Universal properties
+    id: string;
+    type: EntityType;
+    name: string;
+    location: SourceLocation;
+    language: string;
+
+    // Content and context
+    sourceCode: string;
+    signature?: string;
+
+    // Relationships
+    dependencies: string[];
+    exports: string[];
+
+    // Metadata
+    complexity?: number;
+    metadata: Record<string, any>;
+  }
+
+  type EntityType =
+    | 'function' | 'method' | 'class' | 'interface' | 'type'
+    | 'variable' | 'constant' | 'import' | 'export'
+    | 'component' | 'hook' | 'contract' | 'trait';
+
+  ---
+  🔧 Phase 2: Core Framework Development
+
+  Duration: 2-3 weeks
+
+  2.1 Generic Language Abstraction Layer
+
+⏺ Update Todos
+  ⎿  ☐ Create GenericCodeIndexer class with language-agnostic interface
+     ☐ Implement TreeSitterParser wrapper with error handling
+     ☐ Design LanguageAdapter interface for language-specific logic
+     ☐ Create LanguageRegistry for dynamic language support
+
+✻ Thinking…
+
+  Let me continue with the detailed plan, making sure to include specific implementation details, file
+   structures, and technical specifications for each phase.
+
+⏺ Core Architecture Files:
+  src/lib/generic-code-indexer/
+  ├── core/
+  │   ├── GenericCodeIndexer.ts       # Main indexer class
+  │   ├── TreeSitterParser.ts         # Tree-sitter wrapper
+  │   └── LanguageRegistry.ts         # Language management
+  ├── adapters/
+  │   ├── base/LanguageAdapter.ts     # Abstract adapter interface
+  │   ├── TypeScriptAdapter.ts        # JS/TS implementation
+  │   ├── PythonAdapter.ts            # Python implementation
+  │   └── RustAdapter.ts              # Rust implementation
+  ├── entities/
+  │   ├── CodeEntity.ts               # Universal code representation
+  │   └── EntityBuilder.ts            # Entity construction utilities
+  └── utils/
+      ├── ComplexityAnalyzer.ts       # Language-agnostic complexity
+      └── DependencyTracker.ts        # Cross-language dependencies
+
+  GenericCodeIndexer Architecture:
+  class GenericCodeIndexer {
+    private languageRegistry: LanguageRegistry;
+    private parser: TreeSitterParser;
+
+    async analyzeFile(filePath: string, content: string): Promise<FileAnalysis> {
+      // 1. Detect language from file extension
+      const language = this.detectLanguage(filePath);
+
+      // 2. Get appropriate adapter
+      const adapter = this.languageRegistry.getAdapter(language);
+
+      // 3. Parse with Tree-sitter
+      const ast = await this.parser.parse(content, language);
+
+      // 4. Extract entities using language adapter
+      const entities = await adapter.extractEntities(ast, content);
+
+      // 5. Analyze dependencies and complexity
+      const analysis = await this.analyzeCodeStructure(entities, ast);
+
+      return analysis;
+    }
+  }
+
+  2.2 Tree-sitter Integration Layer
+
+  TreeSitterParser Implementation:
+  class TreeSitterParser {
+    private parsers: Map<string, Parser> = new Map();
+
+    async initializeLanguage(language: string): Promise<void> {
+      // Load WASM grammar for language
+      const wasmPath = `./grammars/tree-sitter-${language}.wasm`;
+      const Language = await Parser.Language.load(wasmPath);
+
+      const parser = new Parser();
+      parser.setLanguage(Language);
+      this.parsers.set(language, parser);
+    }
+
+    async parse(sourceCode: string, language: string): Promise<Tree> {
+      const parser = this.parsers.get(language);
+      if (!parser) {
+        throw new Error(`Parser not initialized for language: ${language}`);
+      }
+
+      return parser.parse(sourceCode);
+    }
+  }
+
+  ---
+  🔄 Phase 3: Language Adapter Implementation
+
+  Duration: 3-4 weeks
+
+  3.1 TypeScript/JavaScript Adapter (Migration from Enhanced Indexer)
+
+⏺ Update Todos
+  ⎿  ☐ Migrate existing Babel logic to Tree-sitter TypeScript adapter
+     ☐ Implement React component detection with Tree-sitter
+     ☐ Test adapter with existing codebase files
+     ☐ Add TypeScript-specific entity extraction (interfaces, types)
+
+✻ Thinking…
+
+  I need to continue with the detailed plan, ensuring each phase builds logically on the previous one 
+  and includes specific technical implementation details.
+
+⏺ TypeScript Adapter Capabilities:
+  class TypeScriptAdapter extends LanguageAdapter {
+    async extractEntities(ast: Tree, sourceCode: string): Promise<CodeEntity[]> {
+      const entities: CodeEntity[] = [];
+
+      // Function declarations
+      const functions = this.extractFunctions(ast);
+
+      // Class declarations  
+      const classes = this.extractClasses(ast);
+
+      // Interface declarations
+      const interfaces = this.extractInterfaces(ast);
+
+      // React components (JSX detection)
+      const components = this.extractReactComponents(ast);
+
+      // Import/export statements
+      const dependencies = this.extractDependencies(ast);
+
+      return [...functions, ...classes, ...interfaces, ...components, ...dependencies];
+    }
+
+    private extractReactComponents(ast: Tree): CodeEntity[] {
+      // Tree-sitter query for React components
+      const query = `
+        (function_declaration 
+          name: (identifier) @component_name
+          body: (statement_block 
+            (return_statement 
+              (jsx_element) @jsx)))
+      `;
+
+      return this.executeQuery(ast, query).map(match => ({
+        type: 'component',
+        name: match.component_name,
+        sourceCode: match.jsx,
+        metadata: { framework: 'React', hasJSX: true }
+      }));
+    }
+  }
+
+  3.2 Python Adapter Implementation
+
+  Advanced Python Entity Extraction:
+  class PythonAdapter extends LanguageAdapter {
+    extractEntities(ast: Tree): CodeEntity[] {
+      return [
+        ...this.extractFunctions(ast),      // def functions
+        ...this.extractClasses(ast),        // class definitions
+        ...this.extractDecorators(ast),     // @decorator patterns
+        ...this.extractAsyncFunctions(ast), // async def patterns
+        ...this.extractImports(ast),        // import statements
+      ];
+    }
+
+    private extractDecorators(ast: Tree): CodeEntity[] {
+      // Python-specific decorator extraction
+      const query = `
+        (decorated_definition
+          (decorator (identifier) @decorator_name)
+          definition: (function_definition name: (identifier) @func_name))
+      `;
+
+      return this.executeQuery(ast, query);
+    }
+  }
+
+  3.3 Rust Adapter Implementation
+
+⏺ Update Todos
+  ⎿  ☐ Implement Rust adapter with trait and impl extraction      
+     ☐ Add Rust-specific complexity metrics (ownership, lifetimes)
+     ☐ Implement Cargo.toml dependency analysis
+
+✻ Thinking…
+
+  Let me continue with the detailed plan, ensuring I cover database enhancements and integration steps
+   properly.
+
+⏺ Rust-Specific Features:
+  class RustAdapter extends LanguageAdapter {
+    extractEntities(ast: Tree): CodeEntity[] {
+      return [
+        ...this.extractFunctions(ast),
+        ...this.extractStructs(ast),        // struct definitions
+        ...this.extractTraits(ast),         // trait definitions  
+        ...this.extractImpls(ast),          // impl blocks
+        ...this.extractMods(ast),           // module declarations
+        ...this.extractUseStatements(ast),  // use imports
+      ];
+    }
+
+    calculateComplexity(entity: CodeEntity): number {
+      let complexity = super.calculateComplexity(entity);
+
+      // Rust-specific complexity factors
+      complexity += this.countLifetimeParameters(entity) * 2;
+      complexity += this.countGenericParameters(entity) * 1.5;
+      complexity += this.countUnsafeBlocks(entity) * 3;
+
+      return complexity;
+    }
+  }
+
+  ---
+  🗄️ Phase 4: Database Schema Enhancement
+
+  Duration: 1-2 weeks
+
+  4.1 Enhanced Schema Design
+
+⏺ Update Todos
+  ⎿  ☐ Design new CodeEntity database model for multi-language support
+     ☐ Create migration scripts for schema enhancement
+     ☐ Implement backward compatibility with existing embeddings
+     ☐ Add language-specific metadata fields
+
+✻ Thinking…
+
+  Now I need to design the enhanced database schema that can handle the multi-language code entities 
+  while maintaining backward compatibility with the existing system.
+
+⏺ Enhanced Database Schema:
+  -- Enhanced SourceCodeEmbedding model
+  model SourceCodeEmbedding {
+    id               String    @id @default(cuid())
+
+    -- Core fields (preserved for backward compatibility)
+    summaryEmbedding Unsupported("Vector(768)")?
+    sourceCode       String    // JSON-stringified analysis result
+    fileName         String
+    summary          String
+    projectId        String
+
+    -- Enhanced multi-language fields
+    language         String    // 'typescript', 'rust', 'python', etc.
+    entityType       String?   // 'file', 'function', 'class', 'component'
+    entityName       String?   // Name of the entity (for chunk-level indexing)
+
+    -- Location and scope
+    startLine        Int?      // Start line number (for chunk-level)
+    endLine          Int?      // End line number (for chunk-level)
+    parentFile       String?   // For chunk-level entities
+
+    -- Analysis metadata
+    complexity       Float?    // Language-aware complexity score
+    dependencies     String[]  // Array of dependency names
+    exports          String[]  // Array of exported symbols
+    tags             String[]  // Language-specific tags ['async', 'generic', etc.]
+
+    -- Quality metrics
+    maintainabilityIndex Float?
+    securityScore        Float?
+    performanceScore     Float?
+
+    -- Timestamps
+    lastModified     DateTime?
+    indexedAt        DateTime  @default(now())
+
+    -- Relations
+    project          Project   @relation(fields: [projectId], references: [id])
+
+    @@index([projectId, language])
+    @@index([projectId, entityType])
+    @@index([projectId, fileName])
+    @@index([complexity])
+  }
+
+  -- New model for cross-language dependencies
+  model CodeDependency {
+    id           String @id @default(cuid())
+    sourceId     String // References SourceCodeEmbedding.id
+    targetId     String // References SourceCodeEmbedding.id
+    dependencyType String // 'import', 'call', 'inheritance', 'composition'
+    language     String
+    projectId    String
+
+    source       SourceCodeEmbedding @relation("DependencySource", fields: [sourceId], references:
+  [id])
+    target       SourceCodeEmbedding @relation("DependencyTarget", fields: [targetId], references:
+  [id])
+
+    @@index([projectId, dependencyType])
+  }
+
+  4.2 Migration Strategy
+
+  Backward Compatibility Plan:
+  // Migration script to preserve existing data
+  async function migrateExistingEmbeddings() {
+    const existingEmbeddings = await db.sourceCodeEmbedding.findMany({
+      where: { entityType: null } // Old records
+    });
+
+    for (const embedding of existingEmbeddings) {
+      await db.sourceCodeEmbedding.update({
+        where: { id: embedding.id },
+        data: {
+          entityType: 'file',  // Mark as file-level
+          language: detectLanguageFromFilename(embedding.fileName),
+          indexedAt: new Date(),
+        }
+      });
+    }
+  }
+
+  ---
+  🔗 Phase 5: Integration & Replacement
+
+  Duration: 2-3 weeks
+
+  5.1 GenericCodeIndexer Integration
+
+⏺ Update Todos
+  ⎿  ☐ Integrate GenericCodeIndexer into existing RepoIndexer
+     ☐ Update Inngest background jobs to use new indexer
+     ☐ Implement chunk-level embedding generation
+     ☐ Add feature flag for gradual rollout
+
+✻ Thinking…
+
+  Now I need to detail the integration strategy that replaces the current system while maintaining all
+   existing functionality.
+
+⏺ Enhanced RepoIndexer Integration:
+  class EnhancedRepoIndexer extends RepoIndexer {
+    private genericIndexer: GenericCodeIndexer;
+
+    constructor() {
+      super();
+      this.genericIndexer = new GenericCodeIndexer();
+    }
+
+    async processDocument(document: Document): Promise<ProcessingResult[]> {
+      const fileName = document.metadata.source as string;
+      const content = document.pageContent;
+
+      // Use generic indexer for detailed analysis
+      const analysis = await this.genericIndexer.analyzeFile(fileName, content);
+
+      const results: ProcessingResult[] = [];
+
+      // 1. File-level embedding (preserves existing functionality)
+      const fileLevelResult = await this.createFileLevelEmbedding(analysis);
+      results.push(fileLevelResult);
+
+      // 2. Entity-level embeddings (new capability)
+      for (const entity of analysis.entities) {
+        const entityResult = await this.createEntityLevelEmbedding(entity, analysis);
+        results.push(entityResult);
+      }
+
+      return results;
+    }
+
+    private async createEntityLevelEmbedding(
+      entity: CodeEntity,
+      fileAnalysis: FileAnalysis
+    ): Promise<ProcessingResult> {
+      // Generate entity-specific embedding text
+      const embeddingText = this.buildEntityEmbeddingText(entity);
+      const embedding = await generateEmbedding(embeddingText);
+
+      return {
+        fileName: fileAnalysis.fileName,
+        sourceCode: JSON.stringify({
+          entity: entity,
+          fileContext: {
+            language: fileAnalysis.language,
+            totalComplexity: fileAnalysis.complexity,
+            dependencies: fileAnalysis.dependencies
+          }
+        }),
+        summary: await this.generateEntitySummary(entity),
+        embedding: embedding,
+        metadata: {
+          entityType: entity.type,
+          entityName: entity.name,
+          language: fileAnalysis.language,
+          startLine: entity.location.startLine,
+          endLine: entity.location.endLine,
+          complexity: entity.complexity,
+          dependencies: entity.dependencies,
+          exports: entity.exports,
+          tags: entity.metadata.tags || []
+        }
+      };
+    }
+  }
+
+  5.2 AI Service Enhancement
+
+  Enhanced Vector Search:
+  // Enhanced search with entity-level precision
+  async function searchCode(query: string, projectId: string, options: SearchOptions = {}) {
+    const embedding = await generateEmbedding(query);
+
+    // Multi-level search strategy
+    const fileResults = await searchFileLevel(embedding, projectId);
+    const entityResults = await searchEntityLevel(embedding, projectId, options);
+
+    // Combine and rank results
+    return combineSearchResults(fileResults, entityResults, options);
+  }
+
+  async function searchEntityLevel(
+    embedding: number[], 
+    projectId: string, 
+    options: SearchOptions
+  ) {
+    const entityTypeFilter = options.entityTypes
+      ? `AND entity_type = ANY($3)`
+      : '';
+
+    const languageFilter = options.languages
+      ? `AND language = ANY($4)`
+      : '';
+
+    const query = `
+      SELECT *, 
+             1 - (summary_embedding <=> $1::vector) as similarity
+      FROM "SourceCodeEmbedding" 
+      WHERE project_id = $2 
+        AND entity_type IS NOT NULL  -- Entity-level only
+        ${entityTypeFilter}
+        ${languageFilter}
+      ORDER BY similarity DESC 
+      LIMIT 20
+    `;
+
+    return db.$queryRaw(query, embedding, projectId, options.entityTypes, options.languages);
+  }
+
+  ---
+  🚀 Phase 6: Advanced Features
+
+  Duration: 3-4 weeks
+
+  6.1 Cross-Language Analysis
+
+⏺ Update Todos
+  ⎿  ☐ Implement cross-language dependency tracking           
+     ☐ Add multi-language search capabilities
+     ☐ Build architecture visualization with dependency graphs
+     ☐ Implement language-specific code quality metrics
+
+✻ Thinking…
+
+  Let me continue with the advanced features and testing phases to complete the comprehensive plan.
+
+⏺ Cross-Language Features:
+  // Multi-language architecture understanding
+  class CrossLanguageAnalyzer {
+    async analyzeProjectArchitecture(projectId: string): Promise<ArchitectureMap> {
+      const allEntities = await this.getAllProjectEntities(projectId);
+
+      // Group by language
+      const languageGroups = groupBy(allEntities, 'language');
+
+      // Build dependency graph across languages
+      const dependencyGraph = await this.buildCrossLanguageDependencies(allEntities);
+
+      // Identify architectural patterns
+      const patterns = await this.identifyArchitecturalPatterns(dependencyGraph);
+
+      return {
+        languages: Object.keys(languageGroups),
+        dependencies: dependencyGraph,
+        patterns: patterns,
+        hotspots: this.identifyComplexityHotspots(allEntities),
+        suggestions: await this.generateArchitectureSuggestions(patterns)
+      };
+    }
+
+    private async buildCrossLanguageDependencies(entities: CodeEntity[]): Promise<DependencyGraph> {
+      // Example: TypeScript frontend calling Rust WASM
+      // Example: Python microservice calling Go API
+      // Example: Solidity contracts called from JavaScript
+
+      const graph = new DependencyGraph();
+
+      for (const entity of entities) {
+        for (const dep of entity.dependencies) {
+          const targetEntity = this.findEntityByName(dep, entities);
+          if (targetEntity && targetEntity.language !== entity.language) {
+            graph.addCrossLanguageEdge(entity, targetEntity);
+          }
+        }
+      }
+
+      return graph;
+    }
+  }
+
+  6.2 Enhanced Code Intelligence
+
+  Language-Specific Insights:
+  // Language-specific quality analysis
+  class LanguageSpecificAnalyzer {
+    async analyzeRustCode(entities: CodeEntity[]): Promise<RustAnalysis> {
+      return {
+        memoryManagement: this.analyzeOwnership(entities),
+        concurrency: this.analyzeAsyncPatterns(entities),
+        errorHandling: this.analyzeResultTypes(entities),
+        performance: this.analyzeZeroCostAbstractions(entities)
+      };
+    }
+
+    async analyzeSolidityCode(entities: CodeEntity[]): Promise<SolidityAnalysis> {
+      return {
+        gasOptimization: this.analyzeGasUsage(entities),
+        security: this.analyzeSecurityPatterns(entities),
+        upgradeability: this.analyzeProxyPatterns(entities),
+        compliance: this.analyzeERCCompliance(entities)
+      };
+    }
+  }
+
+  ---
+  🧪 Phase 7: Testing & Optimization
+
+  Duration: 2-3 weeks
+
+  7.1 Comprehensive Testing Strategy
+
+⏺ Update Todos
+  ⎿  ☐ Create test suite for each language adapter       
+     ☐ Build integration tests for full indexing pipeline
+     ☐ Performance testing with large codebases
+     ☐ A/B testing framework for old vs new indexer
+
+✻ Thinking…
+
+  Let me finish the comprehensive plan with testing, optimization, and rollout strategies.
+
+⏺ Testing Framework:
+  // Comprehensive test coverage for each adapter
+  describe('TypeScriptAdapter', () => {
+    test('extracts React components correctly', async () => {
+      const sourceCode = `
+        export const UserProfile = ({ user }: Props) => {
+          return <div>{user.name}</div>;
+        };
+      `;
+
+      const entities = await adapter.extractEntities(sourceCode);
+
+      expect(entities).toContainEqual({
+        type: 'component',
+        name: 'UserProfile',
+        metadata: { framework: 'React', hasJSX: true }
+      });
+    });
+
+    test('calculates complexity correctly', async () => {
+      // Test complex TypeScript with generics, async, etc.
+    });
+  });
+
+  describe('Integration Tests', () => {
+    test('full pipeline: repo → indexing → search', async () => {
+      // End-to-end test of entire system
+    });
+  });
+
+  7.2 Performance Optimization
+
+  Optimization Strategies:
+  class PerformanceOptimizer {
+    // Incremental parsing for file updates
+    async updateFileIncremental(fileName: string, oldContent: string, newContent: string) {
+      const changes = computeTextDiff(oldContent, newContent);
+
+      // Only re-parse changed sections with Tree-sitter incremental parsing
+      const updatedAST = this.parser.parseIncremental(changes);
+
+      // Update only affected entities
+      return this.updateAffectedEntities(fileName, updatedAST, changes);
+    }
+
+    // Parallel processing for large repositories
+    async indexRepositoryInParallel(files: string[]): Promise<void> {
+      const chunks = chunkArray(files, 10); // Process 10 files at a time
+
+      for (const chunk of chunks) {
+        await Promise.all(chunk.map(file => this.indexFile(file)));
+        await delay(100); // Rate limiting
+      }
+    }
+  }
+
+  ---
+  📈 Phase 8: Rollout & Monitoring
+
+  Duration: 2-3 weeks
+
+  8.1 Gradual Rollout Strategy
+
+⏺ Update Todos
+  ⎿  ☐ Implement feature flags for gradual rollout           
+     ☐ Add monitoring and metrics for new indexer performance
+     ☐ Create rollback mechanism in case of issues
+     ☐ User feedback collection system
+
+✻ Thinking…
+
+  Now let me finish the plan with the rollout strategy and expected outcomes, making sure to summarize
+   the comprehensive benefits this will bring to the platform.
+
+⏺ Feature Flag Implementation:
+  // Gradual rollout with feature flags
+  const ROLLOUT_CONFIG = {
+    beta_users: ['user1', 'user2'],         // 5% of users
+    languages: ['typescript', 'javascript'], // Start with JS/TS only
+    project_size_limit: 1000,              // Files limit for beta
+  };
+
+  async function shouldUseGenericIndexer(userId: string, projectId: string): Promise<boolean> {
+    const project = await getProject(projectId);
+    const user = await getUser(userId);
+
+    return (
+      ROLLOUT_CONFIG.beta_users.includes(userId) &&
+      project.fileCount <= ROLLOUT_CONFIG.project_size_limit &&
+      hasLanguageSupport(project.primaryLanguage)
+    );
+  }
+
+  8.2 Success Metrics & Monitoring
+
+  Key Performance Indicators:
+  interface IndexingMetrics {
+    // Performance metrics
+    avgIndexingTime: number;      // Per file indexing time
+    entityExtractionAccuracy: number; // % of entities correctly identified
+    searchRelevanceScore: number; // Search result quality
+
+    // User satisfaction
+    querySuccessRate: number;     // % of queries answered well
+    userSatisfactionRating: number; // 1-5 star ratings
+
+    // System health
+    errorRate: number;           // % of failed indexing attempts
+    apiLatency: number;          // Response time for searches
+    resourceUsage: number;       // CPU/memory consumption
+  }
+
+  ---
+  🎯 Expected Outcomes & Benefits
+
+  Immediate Benefits (Phases 1-5)
+
+  - ✅ Accurate AST Parsing: Replace regex-based analysis with Tree-sitter precision
+  - ✅ Multi-Language Support: Support for 5+ programming languages from day one
+  - ✅ Granular Code Understanding: Function/class level indexing vs file-level only
+  - ✅ Enhanced Search Precision: Find exact functions, not just files
+
+  Advanced Benefits (Phases 6-8)
+
+  - 🚀 Cross-Language Architecture Analysis: Understand full-stack dependencies
+  - 🚀 Language-Specific Intelligence: Rust ownership analysis, React component insights
+  - 🚀 Code Quality Insights: Complexity hotspots, maintainability scoring
+  - 🚀 AI-Powered Suggestions: Architecture improvements, refactoring recommendations
+
+  Platform Transformation
+
+  - From: Basic "chat with your code" tool
+  - To: Comprehensive code intelligence platform
+
+  Competitive Advantages
+
+  1. Multi-Language First: Support beyond just JavaScript/Python
+  2. Deep Code Understanding: AST-level analysis vs text matching
+  3. Architecture Intelligence: Cross-language dependency insights
+  4. Scalable Foundation: Tree-sitter enables rapid language additions
+
+  ---
+  📋 Implementation Timeline Summary
+
+  | Phase                   | Duration  | Key Deliverables                                   | Risk
+  Level |
+  |-------------------------|-----------|----------------------------------------------------|--------
+  ----|
+  | 1. Foundation           | 1-2 weeks | Tree-sitter POC, Architecture design               | Low
+      |
+  | 2. Core Framework       | 2-3 weeks | GenericCodeIndexer, Language registry              | Medium
+      |
+  | 3. Language Adapters    | 3-4 weeks | JS/TS, Python, Rust adapters                       | Medium
+      |
+  | 4. Database Enhancement | 1-2 weeks | Schema migration, Backward compatibility           | High
+      |
+  | 5. Integration          | 2-3 weeks | RepoIndexer replacement, Feature flags             | High
+      |
+  | 6. Advanced Features    | 3-4 weeks | Cross-language analysis, Quality metrics           | Low
+      |
+  | 7. Testing              | 2-3 weeks | Comprehensive test suite, Performance optimization | Medium
+      |
+  | 8. Rollout              | 2-3 weeks | Gradual deployment, Monitoring                     | Low
+      |
+
+  Total Duration: 16-24 weeks (4-6 months)
+
+  ---
+  🔧 Technical Prerequisites
+
+  Dependencies to Add:
+
+  {
+    "web-tree-sitter": "^0.20.8",
+    "tree-sitter-typescript": "^0.20.2",
+    "tree-sitter-python": "^0.20.4",
+    "tree-sitter-rust": "^0.20.4"
+  }
+
+  Infrastructure Requirements:
+
+  - WASM Grammar Files: ~2MB per language
+  - Processing Power: ~2x current indexing time initially
+  - Storage: ~3x current embedding storage (entity-level granularity)
+  - Memory: Tree-sitter parsers require ~50MB per language
+
+  This comprehensive plan transforms Aetheria from a basic code Q&A tool into a sophisticated,
+  multi-language code intelligence platform that rivals GitHub Copilot's understanding capabilities
+  while maintaining your unique vector search and AI-powered assistance features.
+
+  Ready to begin Phase 1? 🚀
+
+> Tell me how using a multi-agent workflow with langgraph and pydantic help in the current context?In 
+  that case, I have to have the backend in python deployed using Modal, right?
+
+⏺ Excellent question! Let me analyze how multi-agent workflows with LangGraph and Pydantic could
+  enhance the code intelligence system, and what this means for your architecture.
+
+⏺ Task(Analyze multi-agent architecture benefits)
+  ⎿  Done (15 tool uses · 44.0k tokens · 4m 25.6s)                                                    
+
+⏺ Based on this comprehensive analysis, here's my assessment of how multi-agent workflows with
+  LangGraph and Pydantic could transform your code intelligence system:
+
+  🎯 Multi-Agent Workflow Benefits for Code Intelligence
+
+  Why Multi-Agent > Single-Agent for Code Analysis
+
+  Current Limitation: One Gemini model trying to be expert at everything
+  // Current: Swiss army knife approach
+  const result = await geminiModel.generateContent([
+    "Analyze this code for security, performance, bugs, and documentation needs"
+  ]);
+
+  Multi-Agent Solution: Specialized experts working together
+  # Specialist agents working in parallel
+  security_agent = SecurityExpertAgent()     # Focused on vulnerabilities  
+  performance_agent = PerformanceAgent()     # Optimizations only
+  architect_agent = ArchitecturalAgent()     # System design patterns
+  test_agent = TestGenerationAgent()         # Test case creation
+
+  Concrete Benefits for Your System
+
+  1. Higher Accuracy: Security agent trained specifically on vulnerability patterns vs general model
+  2. Parallel Processing: 5 agents analyzing simultaneously vs sequential single model
+  3. Specialized Context: Each agent maintains domain-specific knowledge
+  4. Better Reasoning: Complex multi-step analysis (trace authentication flow across 3 services)
+
+  🔄 LangGraph's Game-Changing Capabilities
+
+  Current vs LangGraph Workflow
+
+  Current: Linear, fragile pipeline
+  classify → vectorSearch → generateResponse → done
+  // If any step fails, entire operation fails
+
+  LangGraph: Intelligent, fault-tolerant workflow
+  # Dynamic decision-making workflow
+  workflow = StateGraph(CodeAnalysisState)
+
+  # Agents can route based on findings
+  workflow.add_conditional_edges(
+      "initial_analysis",
+      lambda state: {
+          "security_critical": "security_deep_dive",
+          "performance_issues": "performance_analysis",
+          "architecture_problems": "architecture_review"
+      }[state.primary_concern]
+  )
+
+  Advanced Reasoning Capabilities
+
+  Example: "How does user authentication work in this full-stack app?"
+
+  # Multi-hop reasoning across languages
+  auth_flow_graph = StateGraph(AuthFlowState)
+  auth_flow_graph.add_node("frontend_auth", analyze_react_auth)      # TypeScript
+  auth_flow_graph.add_node("api_middleware", analyze_express_auth)   # Node.js  
+  auth_flow_graph.add_node("database_layer", analyze_prisma_auth)   # SQL
+  auth_flow_graph.add_node("synthesize_flow", create_flow_diagram)  # Combine insights
+
+  # Each agent builds on previous findings
+  # Final output: Complete authentication flow diagram + vulnerabilities
+
+  📋 Pydantic's Structured Intelligence
+
+  Current Problem: Unpredictable AI Responses
+
+  // Current: Hope the AI returns valid JSON
+  const response = await gemini.generateContent([prompt]);
+  const maybe_json = extractJsonFromText(response); // 🤞 fingers crossed
+
+  Pydantic Solution: Guaranteed Structure
+
+  class SecurityAnalysisResult(BaseModel):
+      vulnerabilities: List[SecurityVulnerability]
+      risk_level: Literal["low", "medium", "high", "critical"]
+      remediation_steps: List[RemediationStep]
+      compliance_issues: List[ComplianceIssue]
+
+      # Automatic validation ensures quality
+      @validator('risk_level')
+      def validate_risk_assessment(cls, v, values):
+          if len(values.get('vulnerabilities', [])) > 5 and v == 'low':
+              raise ValueError("Cannot have low risk with 5+ vulnerabilities")
+          return v
+
+  Multi-Language Code Understanding
+
+  # Structured models for each language's unique features
+  class TypeScriptAnalysis(BaseModel):
+      interfaces: List[TypeInterface]
+      react_components: List[ReactComponent]
+      hooks: List[ReactHook]
+      type_safety_score: float
+
+  class RustAnalysis(BaseModel):
+      ownership_patterns: List[OwnershipPattern]
+      unsafe_blocks: List[UnsafeBlock]
+      trait_implementations: List[TraitImpl]
+      memory_safety_score: float
+
+  class SolidityAnalysis(BaseModel):
+      contracts: List[SmartContract]
+      gas_optimizations: List[GasOptimization]
+      security_patterns: List[SecurityPattern]
+      audit_recommendations: List[AuditRecommendation]
+
+  🏗️ Architecture: Do You Need Python Backend?
+
+  Option 1: Hybrid Architecture (Recommended)
+
+  Keep your current Next.js/tRPC setup, add Python agents for complex analysis:
+
+  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
+  │   Next.js App   │    │   tRPC Server    │    │   Modal Python     │
+  │                 │───▶│                  │───▶│   Multi-Agent       │
+  │ - UI/UX         │    │ - Simple queries │    │   - Complex analysis│
+  │ - File management│    │ - Auth          │    │   - LangGraph flows │
+  │ - Real-time     │    │ - Vector search  │    │   - Specialized AI  │
+  └─────────────────┘    └──────────────────┘    └─────────────────────┘
+
+  Route by Complexity:
+  // tRPC router decides where to send requests
+  export const projectRouter = router({
+    // Simple operations stay in TypeScript
+    askQuestion: protectedProcedure
+      .input(z.object({ query: z.string() }))
+      .mutation(async ({ input }) => {
+        return await simpleGeminiQuery(input.query);
+      }),
+
+    // Complex operations go to Python agents
+    comprehensiveCodeAnalysis: protectedProcedure
+      .input(z.object({ projectId: z.string() }))
+      .mutation(async ({ input }) => {
+        // Route to Modal Python backend
+        return await fetch('https://your-modal-app.modal.run/analyze', {
+          method: 'POST',
+          body: JSON.stringify({ projectId: input.projectId })
+        });
+      })
+  });
+
+  Option 2: Full Python Migration
+
+  Replace Next.js backend with FastAPI + LangGraph:
+
+  # FastAPI with LangGraph integration
+  from fastapi import FastAPI
+  from langgraph import StateGraph
+
+  app = FastAPI()
+
+  @app.post("/analyze-codebase")
+  async def analyze_codebase(request: CodeAnalysisRequest):
+      # Initialize multi-agent workflow
+      workflow = create_code_analysis_workflow()
+
+      # Run agents in parallel
+      result = await workflow.arun({"project_id": request.project_id})
+
+      return CodeAnalysisResponse.parse_obj(result)
+
+  💰 Cost-Benefit Analysis
+
+  Performance Gains
+
+  - Current: 30-60 seconds for complex analysis (sequential)
+  - Multi-Agent: 10-20 seconds (parallel processing)
+  - Accuracy: 40-60% improvement in specialized tasks
+
+  Cost Implications
+
+  - API Calls: 3-5x more calls but higher quality
+  - Modal Pricing: ~$0.10 per complex analysis vs $0.02 current
+  - Value: Much higher quality insights justify cost
+
+  Development Effort
+
+  - Hybrid Approach: 2-4 weeks to implement
+  - Full Migration: 8-12 weeks complete rewrite
+
+  🚀 Recommended Implementation Plan
+
+  Phase 1: Proof of Concept (1-2 weeks)
+
+  1. Deploy simple multi-agent system on Modal
+  2. Create one specialized agent (security analysis)
+  3. Route one complex operation from tRPC to Modal
+
+  Phase 2: Core Multi-Agent System (3-4 weeks)
+
+  1. Implement 5 core agents (security, performance, architecture, documentation, testing)
+  2. Build LangGraph workflows for common analysis patterns
+  3. Add Pydantic models for structured outputs
+
+  Phase 3: Advanced Features (4-6 weeks)
+
+  1. Cross-language dependency analysis
+  2. Complex reasoning workflows
+  3. Integration with your existing vector search
+
+  Phase 4: Full Integration (2-3 weeks)
+
+  1. Route all complex operations to multi-agent system
+  2. Maintain simple operations in TypeScript
+  3. Unified UI showing multi-agent insights
+
+  🎯 Specific Use Cases Where Multi-Agent Excels
+
+  1. "Analyze this React app for security vulnerabilities"
+    - Security agent: Finds XSS, CSRF issues
+    - Architecture agent: Identifies insecure patterns
+    - Performance agent: Spots security-impacting bottlenecks
+  2. "Help me optimize this microservices architecture"
+    - Service dependency agent: Maps service calls
+    - Performance agent: Identifies bottlenecks
+    - Cost optimization agent: Suggests efficiency improvements
+  3. "Generate comprehensive tests for this codebase"
+    - Code analysis agent: Understands functionality
+    - Test strategy agent: Plans test approach
+    - Test generation agent: Creates actual test code
+    - Quality assurance agent: Reviews test coverage
+
+  Verdict: Multi-agent with LangGraph/Pydantic would make your system 10x more intelligent and
+  capable. Hybrid architecture lets you get benefits without full migration risk.
+
+  Want me to create a specific implementation plan for the hybrid approach?
+

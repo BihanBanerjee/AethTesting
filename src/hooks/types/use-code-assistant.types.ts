@@ -11,6 +11,7 @@ export interface MessageManagementState {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  clearMessages: () => void;
 }
 
 export interface FileSelectionState {

@@ -18,7 +18,7 @@ interface DarkCodeBlockProps {
 
 export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
   code,
-  language = 'javascript',
+  language = 'text',
   filename,
   showLineNumbers = true,
   className = ''

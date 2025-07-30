@@ -2,13 +2,19 @@
 
 import React, { useState } from 'react';
 import type { StreamableValue } from 'ai/rsc';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Maximize2 } from 'lucide-react';
 import { MessageContainer } from '../components/message-container';
 import { MessageHeader } from '../components/message-header';
 import { GeneratedCodeSection } from '../components/generated-code-section';
 import { DiffDisplaySection } from '../components/diff-display-section';
 import { SuggestionsSection } from '../components/suggestions-section';
 import { FileReferencesSection } from '../components/file-references-section';
+import { CodeReviewResponse } from '../components/code-review-response';
+import { DebugAnalysisResponse } from '../components/debug-analysis-response';
+import { CodeExplanationResponse } from '../components/code-explanation-response';
+import { RefactorResponse } from '../components/refactor-response';
+import { ResponseTabs } from '../components/response-tabs';
+import { ResponseModal } from '../components/response-modal';
 import { EnhancedResponseDisplay } from '../enhanced-response/enhanced-response-display';
 import { useMessageActions } from '../hooks/use-message-actions';
 import type { MessageDisplayProps } from '../types/message-display.types';
@@ -113,15 +119,20 @@ const StreamableContent: React.FC<{ content: string | StreamableValue<string>, m
 
 export const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
   const { handleCopy, handleDownload } = useMessageActions();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  return (
-    <MessageContainer type={message.type}>
-      <MessageHeader
-        intent={message.intent}
-        confidence={message.confidence}
-        timestamp={message.timestamp}
-      />
-      
+  // Determine if this message should use tabbed interface
+  const shouldUseTabs = message.type === 'assistant' && message.metadata && (
+    message.metadata.generatedCode ||
+    message.metadata.responseType === 'code_review' ||
+    message.metadata.responseType === 'debug' ||
+    message.metadata.responseType === 'refactor' ||
+    message.metadata.responseType === 'explain' ||
+    (message.metadata.files && message.metadata.files.length > 2)
+  );
+
+  const contentComponents = (
+    <>
       <StreamableContent content={message.content} messageType={message.type} />
 
       {/* Generated Code Section */}
@@ -149,6 +160,82 @@ export const MessageDisplay: React.FC<MessageDisplayProps> = ({ message }) => {
       {message.metadata?.files && message.metadata.files.length > 0 && (
         <FileReferencesSection files={message.metadata.files} />
       )}
-    </MessageContainer>
+
+      {/* Response-Type-Specific Components */}
+      {message.metadata?.responseType === 'code_review' && message.metadata.reviewMetadata && (
+        <CodeReviewResponse
+          issues={message.metadata.reviewMetadata.issues}
+          qualityScore={message.metadata.reviewMetadata.qualityScore}
+          filesReviewed={message.metadata.reviewMetadata.filesReviewed}
+          suggestions={message.metadata.suggestions || []}
+        />
+      )}
+
+      {message.metadata?.responseType === 'debug' && message.metadata.debugMetadata && (
+        <DebugAnalysisResponse
+          rootCause={message.metadata.debugMetadata.rootCause}
+          solutions={message.metadata.debugMetadata.solutions}
+          suspectedFiles={message.metadata.debugMetadata.suspectedFiles}
+          investigationSteps={message.metadata.debugMetadata.investigationSteps}
+        />
+      )}
+
+      {message.metadata?.responseType === 'explain' && message.metadata.explainMetadata && (
+        <CodeExplanationResponse
+          overview={message.metadata.explainMetadata.codeExplanation?.overview || ''}
+          keyPoints={message.metadata.explainMetadata.keyPoints}
+          complexity={message.metadata.explainMetadata.complexity}
+          recommendations={message.metadata.explainMetadata.recommendations}
+        />
+      )}
+
+      {message.metadata?.responseType === 'refactor' && message.metadata.refactorMetadata && (
+        <RefactorResponse
+          refactoredCode={message.metadata.generatedCode}
+          refactoringPlan={message.metadata.refactorMetadata.refactoringPlan}
+          language={message.metadata.language}
+        />
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <MessageContainer type={message.type}>
+        <div className="flex items-center justify-between">
+          <MessageHeader
+            intent={message.intent}
+            confidence={message.confidence}
+            timestamp={message.timestamp}
+          />
+          
+          {/* Expand to modal button for assistant messages */}
+          {message.type === 'assistant' && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="p-2 hover:bg-white/10 rounded-lg text-white/60 hover:text-white/80 transition-colors opacity-0 group-hover:opacity-100"
+              title="Open in full screen"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
+        {shouldUseTabs ? (
+          <ResponseTabs message={message}>
+            {contentComponents}
+          </ResponseTabs>
+        ) : (
+          contentComponents
+        )}
+      </MessageContainer>
+
+      {/* Full-screen modal */}
+      <ResponseModal
+        message={message}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
+    </>
   );
 };

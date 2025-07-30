@@ -144,12 +144,33 @@ const CodeAssistantPageContent = () => {
                 }
               });
 
+              // Always prefer files content if available, regardless of length
+              const fullContent = (result.files && result.files.length > 0 && result.files[0]?.content) 
+                ? result.files[0].content 
+                : result.generatedCode || '';
+              
+              const isUsingFilesContent = !!(result.files && result.files.length > 0 && result.files[0]?.content);
+              
+              const filename = (result.files && result.files.length > 0 && result.files[0])
+                ? (result.files[0].fileName || result.files[0].path || 'generated-file')
+                : `generated-${request.type}.${request.language === 'typescript' ? 'ts' : 'js'}`;
+              
+              console.log('🔍 CODE GENERATION TAB: Content sources:', {
+                filesAvailable: result.files?.length || 0,
+                firstFileContentLength: result.files?.[0]?.content?.length || 0,
+                generatedCodeLength: result.generatedCode?.length || 0,
+                usingFilesContent: isUsingFilesContent,
+                finalContentLength: fullContent?.length || 0,
+                filesContentPreview: result.files?.[0]?.content?.substring(0, 100) + '...',
+                generatedCodePreview: result.generatedCode?.substring(0, 100) + '...'
+              });
+
               return {
                 id: Date.now().toString(),
                 type: request.type,
-                generatedCode: result.generatedCode || '',
+                generatedCode: fullContent,
                 explanation: result.explanation || '',
-                filename: `generated-${request.type}.${request.language === 'typescript' ? 'ts' : 'js'}`,
+                filename: filename,
                 language: result.language || 'typescript',
                 confidence: 85,
                 suggestions: []

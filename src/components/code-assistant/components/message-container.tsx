@@ -18,7 +18,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
       className={`flex ${type === 'user' ? 'justify-end' : 'justify-start'} mb-6`}
     >
       <div className={`max-w-4xl ${type === 'user' ? 'ml-16' : 'mr-16'}`}>
-        <GlassmorphicCard className={`p-6 ${
+        <GlassmorphicCard className={`p-6 group ${
           type === 'user' 
             ? 'bg-indigo-600/25 border-indigo-500/40 chatgpt-user-message' 
             : 'bg-white/8 border-white/15 chatgpt-assistant-message'
