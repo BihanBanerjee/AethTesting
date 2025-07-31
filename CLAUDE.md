@@ -41,9 +41,11 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - **Auth**: Clerk for user authentication
 - **Payments**: Stripe for credit purchases
 - **File Storage**: Firebase for meeting recordings
-- **Styling**: Tailwind CSS with custom components
-- **UI Components**: Radix UI for accessible components
+- **Styling**: Tailwind CSS 4.0 with custom components
+- **UI Components**: Radix UI for accessible components, shadcn/ui (New York style)
 - **Background Jobs**: Inngest for async processing
+- **Animation**: Framer Motion for UI animations
+- **3D Graphics**: Three.js for enhanced visual effects
 
 ### Key Architecture Patterns
 
@@ -54,13 +56,14 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - Uses protected procedures for authenticated endpoints
 
 #### Database Schema (Prisma)
-- Vector embeddings for code search stored in `SourceCodeEmbedding` model
+- Vector embeddings for code search stored in `SourceCodeEmbedding` model (768-dimensional vectors)
 - Credit-based system tracked in `User` model (starts with 150 credits)
 - Project lifecycle: INITIALIZING → LOADING_REPO → INDEXING_REPO → POLLING_COMMITS → DEDUCTING_CREDITS → COMPLETED
 - Enhanced analytics with `FileAnalytics`, `InteractionAnalytics`, `SuggestionFeedback` models
 - Advanced question tracking with intent classification, confidence scoring, and satisfaction ratings
 - Code generation analytics with complexity scoring and application rate tracking
 - Structured meeting issue extraction and analysis capabilities
+- Uses `Unsupported("Vector(768)")` type for PostgreSQL vector extension compatibility
 
 #### AI Integration
 - Code analysis using Google Gemini (`src/lib/gemini.ts`)
@@ -75,8 +78,12 @@ Aetheria is an AI-powered platform that brings intelligent context to GitHub rep
 - `src/app/(protected)/code-assistant/` - AI-powered code assistant interface
 - `src/app/(protected)/qa/` - Q&A interface for saved questions
 - `src/app/(protected)/meetings/` - Meeting management and summaries
+- `src/app/(protected)/billing/` - Billing and credit management
 - `src/components/` - Reusable UI components organized by feature
 - `src/components/ui/` - Core UI components including custom dark-themed components
+- `src/lib/` - Core libraries and utilities
+- `src/server/` - tRPC server setup and API routers
+- `src/hooks/` - Custom React hooks
 
 ### Key Features Implementation
 - **Vector Search**: Embeddings stored in PostgreSQL with vector extension
