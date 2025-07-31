@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
-import type { QueryIntent, ClassificationContext } from "./types";
+import type { QueryIntent } from "./types";
 
 export class AIClassifier {
   private model: GenerativeModel | null = null;
@@ -21,7 +21,7 @@ export class AIClassifier {
     }
   }
 
-  async classifyQuery(query: string, context?: ClassificationContext): Promise<QueryIntent> {
+  async classifyQuery(query: string): Promise<QueryIntent> {
     this.initializeModel();
     
     if (!this.isAvailable() || !this.model) {
@@ -29,7 +29,7 @@ export class AIClassifier {
     }
 
     try {
-      const prompt = this.buildPrompt(query, context);
+      const prompt = this.buildPrompt(query);
       const result = await this.model.generateContent([prompt]);
       const response = result.response.text();
       
@@ -40,13 +40,11 @@ export class AIClassifier {
     }
   }
 
-  private buildPrompt(query: string, context?: ClassificationContext): string {
+  private buildPrompt(query: string): string {
     return `
       Analyze this user query and classify the intent. Consider the context of a software development project.
 
       Query: "${query}"
-
-      Project Context: ${context?.projectContext ? JSON.stringify(context.projectContext, null, 2) : 'No specific context'}
 
       Classify the intent as one of:
       1. question - User wants information about existing code

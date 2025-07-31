@@ -1,7 +1,7 @@
 import { AIClassifier } from "./ai-classifier";
 import { FallbackClassifier } from "./fallback-classifier";
 import { FileAnalyzer } from "./file-analyzer";
-import type { QueryIntent, ClassificationContext } from "./types";
+import type { QueryIntent } from "./types";
 
 export class IntentClassifier {
   private aiClassifier: AIClassifier;
@@ -14,7 +14,7 @@ export class IntentClassifier {
     this.fileAnalyzer = new FileAnalyzer();
   }
   
-  async classifyQuery(query: string, projectContext?: unknown): Promise<QueryIntent> {
+  async classifyQuery(query: string): Promise<QueryIntent> {
     // Check if AI classification is available
     if (!this.aiClassifier.isAvailable()) {
       // Only warn on server-side, be quiet on client-side
@@ -25,8 +25,7 @@ export class IntentClassifier {
     }
 
     try {
-      const context: ClassificationContext = { projectContext };
-      return await this.aiClassifier.classifyQuery(query, context);
+      return await this.aiClassifier.classifyQuery(query);
     } catch (error) {
       console.error('Intent classification failed:', error);
       // Always fallback to keyword-based classification

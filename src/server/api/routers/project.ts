@@ -91,27 +91,16 @@ export const projectRouter = createTRPCRouter({
         const classifier = new IntentClassifier();
 
         // Get project context for better classification
-        const projectContext = await ctx.db.sourceCodeEmbedding.findMany({
-            where: { projectId: input.projectId },
-            select: { fileName: true },
-            take: 100
-        });
-
-        const availableFiles = projectContext.map(f => f.fileName);
 
         // Classify the intent
-        const intent = await classifier.classifyQuery(input.query, {
-            availableFiles,
-            targetFiles: input.contextFiles || []
-        });
+        const intent = await classifier.classifyQuery(input.query);
 
         // If only classification is requested, return early
         if (input.classifyOnly) {
             return { intent };
         }
 
-        // Instead of using the streaming askQuestion, let's use the AI directly
-        // to get a synchronous response
+        // Instead of using the streaming askQuestion, let's use the AI directly to get a synchronous response
         const { performVectorSearch } = await import('@/app/(protected)/dashboard/actions/database/vector-search');
         const { buildIntentAwarePrompt } = await import('@/app/(protected)/dashboard/actions/prompts/prompt-builder');
         const { google, MODEL_CONFIG } = await import('@/app/(protected)/dashboard/actions/config/ai-config');
@@ -158,19 +147,9 @@ export const projectRouter = createTRPCRouter({
         const classifier = new IntentClassifier();
 
         // Get project context for better classification
-        const projectContext = await ctx.db.sourceCodeEmbedding.findMany({
-            where: { projectId: input.projectId },
-            select: { fileName: true },
-            take: 100
-        });
-
-        const availableFiles = projectContext.map(f => f.fileName);
 
         // Classify the intent
-        const intent = await classifier.classifyQuery(input.query, {
-            availableFiles,
-            targetFiles: input.contextFiles || []
-        });
+        const intent = await classifier.classifyQuery(input.query);
 
         return { intent };
     }),

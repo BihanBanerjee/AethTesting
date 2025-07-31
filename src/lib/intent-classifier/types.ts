@@ -8,7 +8,6 @@ export interface QueryIntent {
 }
 
 export interface ClassificationContext {
-  projectContext?: unknown;
   availableFiles?: string[];
 }
 
