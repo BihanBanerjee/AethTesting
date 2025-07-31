@@ -51,3 +51,9 @@ yarn-error.log*
 # claude files
 CLAUDE.md
 CLAUDE.local.md
+
+# excalidraw files
+*.excalidraw
+
+# text files
+*.txt
