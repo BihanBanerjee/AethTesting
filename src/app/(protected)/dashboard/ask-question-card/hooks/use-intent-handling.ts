@@ -29,7 +29,7 @@ export function useIntentHandling({
   });
   
   // Server-side classification function - dashboard always has project?.id
-  const classifyQuery = useCallback(async (query: string, context?: any) => {
+  const classifyQuery = useCallback(async (query: string) => {
     try {
       if (!project?.id) {
         throw new Error('Project not available - cannot classify intent');
@@ -39,7 +39,6 @@ export function useIntentHandling({
       const result = await serverClassifyMutation.mutateAsync({
         projectId: project.id,
         query,
-        contextFiles: context?.availableFiles || []
       });
       return result.intent;
     } catch (error) {

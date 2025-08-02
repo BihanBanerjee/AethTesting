@@ -175,4 +175,128 @@ CRITICAL: Respond with a JSON object wrapped in \`\`\`json code block.
 \`\`\`
 `;
   }
+
+  buildReviewPrompt(
+    request: CodeGenerationRequest, 
+    context: ProjectContext, 
+    reviewType: 'security' | 'performance' | 'comprehensive' = 'comprehensive',
+    focusAreas?: string
+  ): string {
+    return `
+You are a senior code reviewer conducting a ${reviewType} review.
+
+${focusAreas ? `Focus Areas: ${focusAreas}` : ''}
+
+Project Context:
+- Technology Stack: ${context.techStack.join(', ')}
+- Architecture Pattern: ${context.architecturePattern}
+- Coding Standards: ${context.codingStandards}
+
+Code to Review:
+${context.relevantFiles.map(f => `
+File: ${f.fileName}
+Content:
+${f.sourceCode}
+`).join('\n\n')}
+
+Provide a comprehensive review focusing on:
+${reviewType === 'security' ? 
+'- Security vulnerabilities\n- Input validation\n- Authentication/Authorization\n- Data sanitization' :
+reviewType === 'performance' ?
+'- Performance bottlenecks\n- Memory usage\n- Algorithm efficiency\n- Resource optimization' :
+'- Code quality\n- Best practices\n- Maintainability\n- Testing\n- Documentation'
+}
+
+CRITICAL: Respond with ONLY a JSON object wrapped in \`\`\`json code block.
+
+\`\`\`json
+{
+  "type": "code_review",
+  "files": [],
+  "explanation": "Overall review summary",
+  "warnings": [
+    "Issue 1: Description",
+    "Issue 2: Description"
+  ],
+  "dependencies": [],
+  "issues": [
+    {
+      "type": "security|performance|style|logic",
+      "severity": "high|medium|low", 
+      "file": "filename",
+      "line": 0,
+      "description": "Issue description",
+      "suggestion": "How to fix"
+    }
+  ],
+  "suggestions": [
+    {
+      "type": "improvement|optimization|refactor",
+      "description": "Suggestion description",
+      "impact": "Expected impact"
+    }
+  ],
+  "summary": "Overall review summary",
+  "score": 7
+}
+\`\`\`
+`;
+  }
+
+  buildExplainPrompt(
+    request: CodeGenerationRequest, 
+    context: ProjectContext, 
+    detailLevel: 'brief' | 'detailed' | 'comprehensive' = 'detailed'
+  ): string {
+    const detailLevelInstructions = {
+      brief: 'Provide a concise, high-level explanation (2-3 sentences).',
+      detailed: 'Provide a thorough explanation with key concepts and flow.',
+      comprehensive: 'Provide an in-depth explanation covering all aspects, patterns, and nuances.'
+    };
+
+    return `
+You are a senior software engineer explaining code to a colleague.
+
+Query: "${request.query}"
+Detail Level: ${detailLevel}
+
+Project Context:
+- Technology Stack: ${context.techStack.join(', ')}
+- Architecture Pattern: ${context.architecturePattern}
+
+Code to Explain:
+${context.relevantFiles.map(f => `
+File: ${f.fileName}
+Code: ${f.sourceCode}
+`).join('\n\n')}
+
+${detailLevelInstructions[detailLevel]}
+
+CRITICAL: Respond with ONLY a JSON object wrapped in \`\`\`json code block.
+
+\`\`\`json
+{
+  "type": "code_explanation",
+  "files": [],
+  "explanation": "Main explanation of the code",
+  "warnings": [],
+  "dependencies": [],
+  "keyPoints": [
+    "Important point 1",
+    "Important point 2"
+  ],
+  "codeFlow": [
+    "Step 1: ...",
+    "Step 2: ..."
+  ],
+  "patterns": [
+    "Design pattern or technique used"
+  ],
+  "recommendations": [
+    "Suggested improvements or considerations"
+  ]
+}
+\`\`\`
+`;
+  }
 }

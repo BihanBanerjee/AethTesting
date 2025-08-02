@@ -68,9 +68,17 @@ export class AIClassifier {
     `;
   }
 
+  /*
+  reasoning is NOT used:
+  - Only appears in the AI prompt template
+  - AI generates it but the codebase doesn't consume it
+  - It's dead data - just for human debugging if you inspect the response
+  */
+
   private parseResponse(response: string): QueryIntent {
     // Extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
+    // this regex approach handles both clean JSON and chatty AI responses (extra text around JSON).
     if (!jsonMatch) {
       throw new Error('No JSON found in response');
     }
@@ -87,6 +95,10 @@ export class AIClassifier {
       contextNeeded: ['file', 'function', 'project', 'global'].includes(parsed.contextNeeded) 
         ? parsed.contextNeeded : 'project'
     };
+    /*
+    Pattern: This is defensive programming - don't trust external data (even from AI), always validate
+    and normalize it to match your expected types.
+    */
   }
 
   private handleError(error: unknown): void {

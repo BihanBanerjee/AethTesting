@@ -42,10 +42,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
     
     try {
       // First classify the intent - this will be visible to user
-      const intent = await classifyQuery(state.question, {
-        availableFiles: state.availableFiles,
-        selectedFiles: state.selectedFiles
-      });
+      const intent = await classifyQuery(state.question);
 
       // Store the intent for display in UI
       actions.setIntentPreview(intent);

@@ -2,6 +2,17 @@
 import { BASE_PROMPT_TEMPLATE, DEFAULT_PROMPT_SUFFIX } from '../config/prompts-config';
 
 export const INTENT_PROMPTS = {
+  question: `
+INTENT: QUESTION ANSWERING
+Please provide a comprehensive answer based on the context:
+1. Direct answer to the question with relevant code examples
+2. Step-by-step explanations when applicable
+3. Related concepts, files, or patterns that might be helpful
+4. Practical usage examples from the codebase
+5. Educational context to aid understanding
+
+Take into account any CONTEXT BLOCK provided. If the context does not provide the answer to the question, say "I'm sorry, but I don't know the answer to that based on the available context." Do not invent anything not drawn directly from the context. Answer in markdown syntax with code snippets. Be as detailed as possible when answering.`,
+
   code_generation: `
 INTENT: CODE GENERATION
 Please provide complete, working code examples with:

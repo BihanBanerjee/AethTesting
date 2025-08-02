@@ -73,7 +73,7 @@ export interface StreamResponse {
 
 export type ImprovementType = 'performance' | 'readability' | 'security' | 'optimization';
 
-export type IntentType = 'code_generation' | 'code_improvement' | 'code_review' | 'debug' | 'refactor' | 'explain';
+export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'debug' | 'refactor' | 'explain';
 
 export interface CodeGenerationRequirements {
   framework?: string;

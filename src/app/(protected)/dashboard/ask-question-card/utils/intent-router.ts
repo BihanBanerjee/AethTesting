@@ -95,6 +95,9 @@ export async function routeIntentToHandler(
   selectedFiles: string[],
   mutations: ApiMutations
 ): Promise<EnhancedResponse> {
+  
+  // All requests now go through the unified askQuestion mutation
+  // The wrapper mutations in useApiMutations handle the intent-specific parameters
   let result: any;
   
   switch (intent.type as IntentType) {
@@ -109,23 +112,7 @@ export async function routeIntentToHandler(
         }
       });
 
-      return {
-        type: 'code',
-        content: extractSimpleContent(result),
-        intent,
-        metadata: {
-          generatedCode: result.generatedCode,
-          language: result.language,
-          warnings: result.warnings,
-          dependencies: result.dependencies,
-          files: result.files?.map((f: any) => f.path) || []
-        },
-        filesReferences: (result.generatedCode || result.files?.[0]?.content) ? [{
-          fileName: result.files?.[0]?.path || `generated-${intent.type}.${result.files?.[0]?.language || result.language || 'md'}`,
-          sourceCode: convertLiteralNewlines(result.generatedCode || result.files?.[0]?.content || ''),
-          summary: generateCodeSummary(result, question)
-        }] : []
-      };
+      return transformToEnhancedResponse(result, intent, question, 'code');
 
     case 'code_improvement':
       result = await mutations.improveCode.mutateAsync({
@@ -135,26 +122,7 @@ export async function routeIntentToHandler(
         improvementType: 'optimization'
       });
 
-      // Handle both unified and legacy response formats
-      const actualCode = result.generatedCode || result.improvedCode || result.files?.[0]?.content;
-      const actualLanguage = result.files?.[0]?.language || result.language || 'ts';
-      const actualFileName = result.files?.[0]?.path || `improved-${intent.targetFiles?.[0] || 'code'}.${actualLanguage}`;
-
-      return {
-        type: 'code',
-        content: extractSimpleContent(result),
-        intent,
-        metadata: {
-          generatedCode: actualCode,
-          diff: result.diff,
-          suggestions: result.suggestions
-        },
-        filesReferences: actualCode ? [{
-          fileName: actualFileName,
-          sourceCode: convertLiteralNewlines(actualCode),
-          summary: generateCodeSummary(result, question).replace(/component|function/, 'improved $&')
-        }] : []
-      };
+      return transformToEnhancedResponse(result, intent, question, 'code');
 
     case 'code_review':
       result = await mutations.reviewCode.mutateAsync({
@@ -164,16 +132,7 @@ export async function routeIntentToHandler(
         focusAreas: question
       });
 
-      return {
-        type: 'review',
-        content: extractSimpleContent(result),
-        intent,
-        metadata: {
-          issues: result.issues,
-          suggestions: result.suggestions,
-          files: result.filesReviewed
-        }
-      };
+      return transformToEnhancedResponse(result, intent, question, 'review');
 
     case 'debug':
       result = await mutations.debugCode.mutateAsync({
@@ -182,33 +141,122 @@ export async function routeIntentToHandler(
         contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
       });
 
-      return {
-        type: 'debug',
-        content: extractSimpleContent(result),
-        intent,
-        metadata: {
-          suggestions: result.suggestions,
-          files: result.suspectedFiles
-        }
-      };
+      return transformToEnhancedResponse(result, intent, question, 'debug');
 
-    default:
-      // Fallback to regular Q&A
-      const qaResult = await mutations.askQuestion.mutateAsync({
+    case 'refactor':
+      // Add refactor case that was missing
+      result = await mutations.askQuestion.mutateAsync({
         projectId,
         query: question,
-        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
+        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
+        intent: 'refactor',
+        refactoringGoals: question,
+        preserveAPI: true
       });
 
-      const content = await processStreamableValue(qaResult);
+      return transformToEnhancedResponse(result, intent, question, 'code');
+
+    case 'explain':
+      // Add explain case that was missing
+      result = await mutations.askQuestion.mutateAsync({
+        projectId,
+        query: question,
+        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
+        intent: 'explain',
+        detailLevel: 'detailed'
+      });
+
+      return transformToEnhancedResponse(result, intent, question, 'answer');
+
+    case 'question':
+    default:
+      // Fallback to regular Q&A
+      result = await mutations.askQuestion.mutateAsync({
+        projectId,
+        query: question,
+        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
+        intent: intent.type || 'question'
+      });
+
+      const content = await processStreamableValue(result);
 
       return {
         type: 'answer',
         content,
         intent,
-        filesReferences: qaResult.filesReferences || []
+        filesReferences: result.filesReferences || []
       };
   }
+}
+
+// Helper function to transform unified responses to Enhanced Response Format
+function transformToEnhancedResponse(
+  result: any, 
+  intent: any, 
+  question: string, 
+  responseType: 'code' | 'review' | 'debug' | 'answer'
+): EnhancedResponse {
+  // CRITICAL: Preserve existing Enhanced Response Format transformation
+  // This ensures the 📑 Response | 💻 Code | 📁 Files UI continues to work
+  
+  if (responseType === 'code' && (result.files && result.files.length > 0 || result.generatedCode || result.improvedCode)) {
+    const actualCode = result.generatedCode || result.improvedCode || result.files?.[0]?.content;
+    const actualLanguage = result.files?.[0]?.language || result.language || 'ts';
+    const actualFileName = result.files?.[0]?.path || `${intent.type}-${Date.now()}.${actualLanguage}`;
+
+    return {
+      type: 'code',
+      content: extractSimpleContent(result),
+      intent,
+      metadata: {
+        generatedCode: actualCode,
+        language: actualLanguage,
+        warnings: result.warnings,
+        dependencies: result.dependencies,
+        files: result.files?.map((f: any) => f.path) || [],
+        diff: result.diff,
+        suggestions: result.suggestions
+      },
+      filesReferences: actualCode ? [{
+        fileName: actualFileName,
+        sourceCode: convertLiteralNewlines(actualCode),
+        summary: generateCodeSummary(result, question)
+      }] : []
+    };
+  }
+
+  if (responseType === 'review') {
+    return {
+      type: 'review',
+      content: extractSimpleContent(result),
+      intent,
+      metadata: {
+        issues: result.issues,
+        suggestions: result.suggestions,
+        files: result.filesReviewed
+      }
+    };
+  }
+
+  if (responseType === 'debug') {
+    return {
+      type: 'debug',
+      content: extractSimpleContent(result),
+      intent,
+      metadata: {
+        suggestions: result.suggestions,
+        files: result.suspectedFiles
+      }
+    };
+  }
+
+  // Default answer format
+  return {
+    type: 'answer',
+    content: result.answer || extractSimpleContent(result),
+    intent,
+    filesReferences: result.filesReferences || []
+  };
 }
 
 async function processStreamableValue(qaResult: any): Promise<string> {

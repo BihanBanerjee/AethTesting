@@ -5,6 +5,10 @@ export const SEARCH_CONFIG = {
   DEFAULT_SIMILARITY_THRESHOLD: 0.5,
   DEFAULT_RESULT_LIMIT: 10,
   INTENT_SPECIFIC: {
+    question: {
+      similarityThreshold: 0.3,
+      resultLimit: 10,
+    },
     explain: {
       similarityThreshold: 0.3,
       resultLimit: 10,

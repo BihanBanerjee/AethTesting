@@ -29,7 +29,6 @@ export const IntentClassifierProvider: React.FC<{ children: React.ReactNode }> =
       const result = await classifyIntentMutation.mutateAsync({
         projectId: context.projectId,
         query,
-        contextFiles: context.targetFiles
       });
       
       // Clear any previous errors on successful classification

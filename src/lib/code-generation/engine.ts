@@ -5,6 +5,8 @@ import { NewCodeStrategy } from "./strategies/new-code-strategy";
 import { ImprovementStrategy } from "./strategies/improvement-strategy";
 import { RefactorStrategy } from "./strategies/refactor-strategy";
 import { DebugStrategy } from "./strategies/debug-strategy";
+import { ReviewStrategy } from "./strategies/review-strategy";
+import { ExplainStrategy } from "./strategies/explain-strategy";
 
 export class CodeGenerationEngine {
   private contextAnalyzer = new ProjectContextAnalyzer();
@@ -12,7 +14,9 @@ export class CodeGenerationEngine {
     code_generation: new NewCodeStrategy(),
     code_improvement: new ImprovementStrategy(),
     refactor: new RefactorStrategy(),
-    debug: new DebugStrategy()
+    debug: new DebugStrategy(),
+    code_review: new ReviewStrategy(),
+    explain: new ExplainStrategy()
   };
 
   async generateCode(request: CodeGenerationRequest): Promise<CodeGenerationResult> {

@@ -57,7 +57,6 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
           () => serverClassifyMutation.mutateAsync({
             projectId: project.id,
             query: messageState.input,
-            contextFiles: fileState.availableFiles
           }),
           'intent classification'
         );

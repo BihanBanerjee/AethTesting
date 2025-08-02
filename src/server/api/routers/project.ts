@@ -2,7 +2,6 @@ import { z } from "zod";
 import { createTRPCRouter, protectedProcedure} from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { inngest } from "@/lib/inngest/client";
-import { aiCodeService } from "../services/ai-code-service";
 import { analyticsService } from "../services/analytics-service";
 import { meetingService } from "../services/meeting-service";
 import { projectUtils } from "../services/project-utils";
@@ -84,55 +83,107 @@ export const projectRouter = createTRPCRouter({
             query: z.string(),
             contextFiles: z.array(z.string()).optional(),
             intent: z.string().optional(),
-            classifyOnly: z.boolean().optional()
+            classifyOnly: z.boolean().optional(),
+            
+            // Code generation specific parameters
+            requirements: z.object({
+                framework: z.string().optional(),
+                language: z.string().optional(),
+                features: z.array(z.string()).optional(),
+                constraints: z.array(z.string()).optional()
+            }).optional(),
+            
+            // Code improvement specific parameters
+            improvementType: z.enum(['performance', 'readability', 'security', 'optimization']).optional(),
+            
+            // Code review specific parameters
+            reviewType: z.enum(['security', 'performance', 'comprehensive']).optional(),
+            focusAreas: z.string().optional(),
+            
+            // Debug specific parameters
+            errorDescription: z.string().optional(),
+            contextLevel: z.enum(['file', 'function', 'project', 'global']).optional(),
+            
+            // Refactor specific parameters
+            refactoringGoals: z.string().optional(),
+            preserveAPI: z.boolean().optional(),
+            
+            // Explain specific parameters
+            detailLevel: z.enum(['brief', 'detailed', 'comprehensive']).optional()
         })
     ).mutation(async ({ ctx, input }) => {
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         const classifier = new IntentClassifier();
 
-        // Get project context for better classification
-
-        // Classify the intent
+        // Classify intent (use provided intent or classify from query)
         const intent = await classifier.classifyQuery(input.query);
+        if (input.intent) {
+            intent.type = input.intent as 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'debug' | 'refactor' | 'explain';
+        }
 
         // If only classification is requested, return early
         if (input.classifyOnly) {
             return { intent };
         }
 
-        // Instead of using the streaming askQuestion, let's use the AI directly to get a synchronous response
-        const { performVectorSearch } = await import('@/app/(protected)/dashboard/actions/database/vector-search');
-        const { buildIntentAwarePrompt } = await import('@/app/(protected)/dashboard/actions/prompts/prompt-builder');
-        const { google, MODEL_CONFIG } = await import('@/app/(protected)/dashboard/actions/config/ai-config');
-        const { getSearchConfig } = await import('@/app/(protected)/dashboard/actions/config/search-config');
-        
-        // Perform vector search
-        const searchConfig = getSearchConfig(intent.type);
-        const vectorResult = await performVectorSearch(input.query, input.projectId, searchConfig);
-        
-        // Build context string
-        let context = '';
-        for (const doc of vectorResult) {
-            context += `source: ${doc.fileName}\ncode content:${doc.sourceCode}\n summary of file: ${doc.summary}\n\n`;
-        }
-        
-        // Build intent-aware prompt
-        const systemPrompt = buildIntentAwarePrompt(intent.type, input.query, context);
-        
-        // Get AI response directly (non-streaming)
-        const { generateText } = await import('ai');
-        const response = await generateText({
-            model: google(MODEL_CONFIG.QUESTION_ANSWERING),
-            prompt: systemPrompt
-        });
-        
-        const finalAnswer = response.text || 'No response generated';
+        // Route to appropriate strategy through unified CodeGenerationEngine
+        switch (intent.type) {
+            case 'code_generation':
+            case 'code_improvement':
+            case 'debug':
+            case 'refactor':
+            case 'code_review':
+            case 'explain':
+                const { CodeGenerationEngine } = await import('@/lib/code-generation');
+                const { UnifiedResponseAdapter } = await import('@/lib/code-generation/unified-response-adapter');
+                
+                const engine = new CodeGenerationEngine();
+                const result = await engine.generateCode({
+                    intent,
+                    query: input.query,
+                    projectId: input.projectId,
+                    contextFiles: input.contextFiles,
+                    targetFile: input.contextFiles?.[0]
+                });
+                
+                return UnifiedResponseAdapter.adaptCodeGenerationResult(result, intent.type);
 
-        return {
-            intent,
-            answer: finalAnswer,
-            filesReferences: vectorResult
-        };
+            case 'question':
+            default:
+                // Existing Q&A logic for question intent and fallback
+                const { performVectorSearch } = await import('@/app/(protected)/dashboard/actions/database/vector-search');
+                const { buildIntentAwarePrompt } = await import('@/app/(protected)/dashboard/actions/prompts/intent-prompts');
+                const { google, MODEL_CONFIG } = await import('@/app/(protected)/dashboard/actions/config/ai-config');
+                const { getSearchConfig } = await import('@/app/(protected)/dashboard/actions/config/search-config');
+                
+                // Perform vector search
+                const searchConfig = getSearchConfig(intent.type);
+                const vectorResult = await performVectorSearch(input.query, input.projectId, searchConfig);
+                
+                // Build context string
+                let context = '';
+                for (const doc of vectorResult) {
+                    context += `source: ${doc.fileName}\ncode content:${doc.sourceCode}\n summary of file: ${doc.summary}\n\n`;
+                }
+                
+                // Build intent-aware prompt
+                const systemPrompt = buildIntentAwarePrompt(intent.type, input.query, context);
+                
+                // Get AI response directly (non-streaming)
+                const { generateText } = await import('ai');
+                const response = await generateText({
+                    model: google(MODEL_CONFIG.QUESTION_ANSWERING),
+                    prompt: systemPrompt
+                });
+                
+                const finalAnswer = response.text || 'No response generated';
+
+                return {
+                    intent,
+                    answer: finalAnswer,
+                    filesReferences: vectorResult
+                };
+        }
     }),
 
     // Dedicated Intent Classification Endpoint
@@ -140,13 +191,10 @@ export const projectRouter = createTRPCRouter({
         z.object({
             projectId: z.string(),
             query: z.string(),
-            contextFiles: z.array(z.string()).optional(),
         })
     ).mutation(async ({ ctx, input }) => {
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         const classifier = new IntentClassifier();
-
-        // Get project context for better classification
 
         // Classify the intent
         const intent = await classifier.classifyQuery(input.query);
@@ -154,87 +202,8 @@ export const projectRouter = createTRPCRouter({
         return { intent };
     }),
 
-    // Code Generation with Intent
-    generateCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            prompt: z.string(),
-            context: z.array(z.string()).optional(),
-            requirements: z.object({
-                framework: z.string().optional(),
-                language: z.string().optional(),
-                features: z.array(z.string()).optional(),
-                constraints: z.array(z.string()).optional()
-            }).optional(),
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.generateCode(ctx, input);
-    }),
 
-    // Code Improvement with Intent
-    improveCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            suggestions: z.string(),
-            targetFiles: z.array(z.string()).optional(),
-            improvementType: z.enum(['performance', 'readability', 'security', 'optimization']).optional(),
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.improveCode(ctx, input);
-    }),
-
-    // Code Review with Intent
-    reviewCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            files: z.array(z.string()),
-            reviewType: z.enum(['security', 'performance', 'comprehensive']),
-            focusAreas: z.string().optional()
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.reviewCode(ctx, input);
-    }),
-
-    // Debug Code with Intent
-    debugCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            errorDescription: z.string(),
-            suspectedFiles: z.array(z.string()).optional(),
-            contextLevel: z.enum(['file', 'function', 'project', 'global'])
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.debugCode(ctx, input);
-    }),
-
-    // Refactor Code with Intent
-    refactorCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            refactoringGoals: z.string(),
-            targetFiles: z.array(z.string()).optional(),
-            preserveAPI: z.boolean().default(true)
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.refactorCode(ctx, input);
-    }),
-
-    // Explain Code with Intent
-    explainCode: protectedProcedure.input(
-        z.object({
-            projectId: z.string(),
-            query: z.string(),
-            targetFiles: z.array(z.string()).optional(),
-            detailLevel: z.enum(['brief', 'detailed', 'comprehensive']).default('detailed')
-        })
-    ).mutation(async ({ ctx, input }) => {
-        return await aiCodeService.explainCode(ctx, input);
-    }),
-
-
-
-
-    // Add new endpoint to get project status
+    // New endpoint to get project status
     getProjectStatus: protectedProcedure.input(
         z.object({
             projectId: z.string(),
@@ -258,8 +227,7 @@ export const projectRouter = createTRPCRouter({
     }),
 
 
-
-    // Get all projects with status for queue view
+    // All projects with status for queue view
     getProjectsWithStatus: protectedProcedure.query(async ({ctx}) => {
         const projects = await ctx.db.project.findMany({
             where: {
@@ -285,6 +253,8 @@ export const projectRouter = createTRPCRouter({
         });
         return projects;
     }),
+
+
     getProjects: protectedProcedure.query(async ({ctx}) => {
         const projects = await ctx.db.project.findMany({
             where: {

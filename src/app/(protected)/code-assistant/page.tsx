@@ -51,12 +51,12 @@ const CodeAssistantPageContent = () => {
     projectContext
   } = useCodeAssistant();
 
-  // Move the mutation hook to the top level
-  const generateCodeMutation = api.project.generateCode.useMutation();
+  // Use the unified askQuestionWithIntent mutation instead of deprecated generateCode
+  const generateCodeMutation = api.project.askQuestionWithIntent.useMutation();
 
 
   const handleRemoveFile = (file: string) => {
-    setSelectedFiles(prev => prev.filter(f => f !== file));
+    setSelectedFiles((prev: string[]) => prev.filter((f: string) => f !== file));
   };
   
   return (
@@ -125,7 +125,7 @@ const CodeAssistantPageContent = () => {
             isLoading={isLoading}
             selectedFiles={selectedFiles}
             onRemoveFile={handleRemoveFile}
-            textareaRef={textareaRef}
+            textareaRef={textareaRef as React.RefObject<HTMLTextAreaElement>}
           />
         </TabsContent>
 
@@ -137,7 +137,8 @@ const CodeAssistantPageContent = () => {
               // Use the mutation hook that's defined at the top level
               const result = await generateCodeMutation.mutateAsync({
                 projectId: project!.id,
-                prompt: request.prompt,
+                query: request.prompt,
+                intent: 'code_generation',
                 requirements: {
                   framework: request.framework,
                   language: request.language
@@ -145,33 +146,33 @@ const CodeAssistantPageContent = () => {
               });
 
               // Always prefer files content if available, regardless of length
-              const fullContent = (result.files && result.files.length > 0 && result.files[0]?.content) 
-                ? result.files[0].content 
-                : result.generatedCode || '';
+              const fullContent = ((result as any).files && (result as any).files.length > 0 && (result as any).files[0]?.content) 
+                ? (result as any).files[0].content 
+                : (result as any).generatedCode || '';
               
-              const isUsingFilesContent = !!(result.files && result.files.length > 0 && result.files[0]?.content);
+              const isUsingFilesContent = !!((result as any).files && (result as any).files.length > 0 && (result as any).files[0]?.content);
               
-              const filename = (result.files && result.files.length > 0 && result.files[0])
-                ? (result.files[0].fileName || result.files[0].path || 'generated-file')
+              const filename = ((result as any).files && (result as any).files.length > 0 && (result as any).files[0])
+                ? ((result as any).files[0].fileName || (result as any).files[0].path || 'generated-file')
                 : `generated-${request.type}.${request.language === 'typescript' ? 'ts' : 'js'}`;
               
               console.log('🔍 CODE GENERATION TAB: Content sources:', {
-                filesAvailable: result.files?.length || 0,
-                firstFileContentLength: result.files?.[0]?.content?.length || 0,
-                generatedCodeLength: result.generatedCode?.length || 0,
+                filesAvailable: (result as any).files?.length || 0,
+                firstFileContentLength: (result as any).files?.[0]?.content?.length || 0,
+                generatedCodeLength: (result as any).generatedCode?.length || 0,
                 usingFilesContent: isUsingFilesContent,
                 finalContentLength: fullContent?.length || 0,
-                filesContentPreview: result.files?.[0]?.content?.substring(0, 100) + '...',
-                generatedCodePreview: result.generatedCode?.substring(0, 100) + '...'
+                filesContentPreview: (result as any).files?.[0]?.content?.substring(0, 100) + '...',
+                generatedCodePreview: (result as any).generatedCode?.substring(0, 100) + '...'
               });
 
               return {
                 id: Date.now().toString(),
                 type: request.type,
                 generatedCode: fullContent,
-                explanation: result.explanation || '',
+                explanation: (result as any).explanation || '',
                 filename: filename,
-                language: result.language || 'typescript',
+                language: (result as any).language || 'typescript',
                 confidence: 85,
                 suggestions: []
               };
