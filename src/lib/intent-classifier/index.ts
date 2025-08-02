@@ -41,6 +41,26 @@ export class IntentClassifier {
 
 // Export types and components
 export type { QueryIntent, ClassificationContext } from "./types";
+export type { 
+  IntentBasedInput,
+  QuestionInput,
+  CodeGenerationInput,
+  CodeImprovementInput,
+  CodeReviewInput,
+  DebugInput,
+  RefactorInput,
+  ExplainInput,
+  ExtractIntentInput
+} from "./input-types";
+export { 
+  isQuestionInput,
+  isCodeGenerationInput,
+  isCodeImprovementInput,
+  isCodeReviewInput,
+  isDebugInput,
+  isRefactorInput,
+  isExplainInput
+} from "./input-types";
 export { AIClassifier } from "./ai-classifier";
 export { FallbackClassifier } from "./fallback-classifier";
 export { FileAnalyzer } from "./file-analyzer";

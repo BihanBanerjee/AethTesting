@@ -1,4 +1,4 @@
-// src/types/intent-inputs.ts
+// src/lib/intent-classifier/input-types.ts
 // Intent-based input types using discriminated unions for type safety
 
 // Import existing types we'll reuse

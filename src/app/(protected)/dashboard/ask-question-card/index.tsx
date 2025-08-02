@@ -36,6 +36,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
   // Sync available files with component state
   useEffect(() => {
     actions.setAvailableFiles(fileNames);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileNames, actions.setAvailableFiles]);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

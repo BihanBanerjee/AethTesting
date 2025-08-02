@@ -7,7 +7,7 @@ import type {
   CodeImprovementInput, 
   CodeReviewInput, 
   DebugInput 
-} from '@/types/intent-inputs';
+} from '@/lib/intent-classifier/input-types';
 
 export function useApiMutations(): ApiMutations & { refetch: () => void } {
   const saveAnswer = api.project.saveAnswer.useMutation();

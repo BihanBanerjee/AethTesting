@@ -5,7 +5,7 @@ import type {
   CodeImprovementInput, 
   CodeReviewInput, 
   DebugInput 
-} from '@/types/intent-inputs';
+} from '@/lib/intent-classifier/input-types';
 
 // Feedback-related interfaces
 export interface FeedbackData {
