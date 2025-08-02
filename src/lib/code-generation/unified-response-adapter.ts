@@ -1,6 +1,6 @@
 // src/lib/code-generation/unified-response-adapter.ts
 import type { CodeGenerationResult } from "./types";
-import type { UnifiedResponse, FileReference, Suggestion } from "@/types/unified-response";
+import type { UnifiedResponse, FileReference, Suggestion } from "./response-types";
 import { MessageClassifier } from "./message-classifier";
 
 /**

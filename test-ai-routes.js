@@ -398,7 +398,7 @@ async function testFrontendCompatibility(testCase, response) {
   try {
     // Simulate frontend response processing
     const { extractResponseContent, extractResponseMetadata } = require('./src/hooks/utils/response-processors.ts');
-    const { ResponseTransformer } = require('./src/types/unified-response.ts');
+    const { ResponseTransformer } = require('./src/lib/code-generation/response-types.ts');
     
     // Test content extraction
     const content = extractResponseContent(response);

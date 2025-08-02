@@ -1,5 +1,5 @@
-// Unified response interface for all AI service endpoints
-// This ensures consistent response format across all intent types
+// Response types for code generation AI service endpoints
+// Moved from src/types/unified-response.ts for better domain organization
 
 export interface UnifiedResponse {
   // Core response content

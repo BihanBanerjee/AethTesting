@@ -512,7 +512,7 @@ function runAllTests() {
   try {
     // Check if response processor files exist and are valid
     const processorPath = join(__dirname, 'src/hooks/utils/response-processors.ts');
-    const unifiedResponsePath = join(__dirname, 'src/types/unified-response.ts');
+    const unifiedResponsePath = join(__dirname, 'src/lib/code-generation/response-types.ts');
     
     try {
       const processorContent = readFileSync(processorPath, 'utf8');

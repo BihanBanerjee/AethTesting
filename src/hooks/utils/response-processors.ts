@@ -1,7 +1,7 @@
 import type { QueryIntent } from '@/lib/intent-classifier';
 import type { MessageMetadata, CodeSuggestion } from '@/components/code-assistant/types';
 import type { StreamableValue } from 'ai/rsc';
-import { ResponseTransformer, type UnifiedResponse } from '@/types/unified-response';
+import { ResponseTransformer, type UnifiedResponse } from '@/lib/code-generation/response-types';
 
 // Helper function to safely handle potentially malformed responses
 export function safelyProcessResponse<T>(
