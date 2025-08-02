@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import type { QueryIntent } from '@/lib/intent-classifier';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, MessageSquare, Code, FileText, Lightbulb, Zap, Bug, Search, Wrench, CheckCircle } from 'lucide-react';
@@ -26,7 +27,7 @@ interface QuestionInputProps {
   availableFiles?: string[];
   selectedFiles?: string[];
   onFileSelect?: (files: string[]) => void;
-  intentPreview?: any;
+  intentPreview?: QueryIntent | null;
   processingStage?: 'analyzing' | 'processing' | 'generating' | 'complete';
   projectId?: string;
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react';
+import type { QueryIntent } from '@/lib/intent-classifier';
 import { Badge } from '@/components/ui/badge';
 import { 
   Code, 
@@ -35,7 +36,7 @@ const intentColors = {
 };
 
 interface UserMessageHeaderProps {
-  intentPreview?: any;
+  intentPreview?: QueryIntent | null;
   processingStage?: 'analyzing' | 'processing' | 'generating' | 'complete';
   loading?: boolean;
 }

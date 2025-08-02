@@ -1,13 +1,14 @@
 // src/app/(protected)/dashboard/ask-question-card/hooks/use-question-state.ts
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { QuestionState, EnhancedResponse, ActiveTab, ProcessingStage } from '../types/enhanced-response';
+import type { QueryIntent } from '@/lib/intent-classifier';
 
 interface PersistedResponseState {
   question: string;
   response: EnhancedResponse | null;
   activeTab: ActiveTab;
-  intentPreview: any;
+  intentPreview: QueryIntent | null;
   selectedFiles: string[];
 }
 
@@ -58,7 +59,7 @@ export function useQuestionState() {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<EnhancedResponse | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('response');
-  const [intentPreview, setIntentPreview] = useState<any>(null);
+  const [intentPreview, setIntentPreview] = useState<QueryIntent | null>(null);
   const [processingStage, setProcessingStage] = useState<ProcessingStage>('analyzing');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);

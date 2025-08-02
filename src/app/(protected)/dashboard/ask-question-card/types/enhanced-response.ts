@@ -1,4 +1,11 @@
 // src/app/(protected)/dashboard/ask-question-card/types/enhanced-response.ts
+import type { QueryIntent } from '@/lib/intent-classifier';
+import type { 
+  CodeGenerationInput, 
+  CodeImprovementInput, 
+  CodeReviewInput, 
+  DebugInput 
+} from '@/types/intent-inputs';
 
 // Feedback-related interfaces
 export interface FeedbackData {
@@ -66,7 +73,7 @@ export interface QuestionState {
   loading: boolean;
   response: EnhancedResponse | null;
   activeTab: ActiveTab;
-  intentPreview: any;
+  intentPreview: QueryIntent | null;
   processingStage: ProcessingStage;
   selectedFiles: string[];
   availableFiles: string[];
@@ -81,12 +88,24 @@ export interface FileReference {
 }
 
 export interface ApiMutations {
-  askQuestion: any;
-  generateCode: any;
-  improveCode: any;
-  reviewCode: any;
-  debugCode: any;
-  saveAnswer: any;
+  askQuestion: {
+    mutateAsync: (input: any) => Promise<any>;
+  };
+  generateCode: {
+    mutateAsync: (input: CodeGenerationInput) => Promise<any>;
+  };
+  improveCode: {
+    mutateAsync: (input: CodeImprovementInput) => Promise<any>;
+  };
+  reviewCode: {
+    mutateAsync: (input: CodeReviewInput) => Promise<any>;
+  };
+  debugCode: {
+    mutateAsync: (input: DebugInput) => Promise<any>;
+  };
+  saveAnswer: {
+    mutateAsync: (input: any) => Promise<any>;
+  };
 }
 
 // New interfaces for collapsible sections

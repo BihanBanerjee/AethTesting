@@ -2,6 +2,12 @@
 import { api } from '@/trpc/react';
 import useRefetch from '@/hooks/use-refetch';
 import type { ApiMutations } from '../types/enhanced-response';
+import type { 
+  CodeGenerationInput, 
+  CodeImprovementInput, 
+  CodeReviewInput, 
+  DebugInput 
+} from '@/types/intent-inputs';
 
 export function useApiMutations(): ApiMutations & { refetch: () => void } {
   const saveAnswer = api.project.saveAnswer.useMutation();
@@ -12,7 +18,7 @@ export function useApiMutations(): ApiMutations & { refetch: () => void } {
   
   // Create wrapper mutations that maintain the same interface but use the unified endpoint
   const generateCode = {
-    mutateAsync: async (input: any) => 
+    mutateAsync: async (input: CodeGenerationInput) => 
       askQuestion.mutateAsync({
         projectId: input.projectId,
         query: input.prompt,
@@ -23,7 +29,7 @@ export function useApiMutations(): ApiMutations & { refetch: () => void } {
   };
 
   const improveCode = {
-    mutateAsync: async (input: any) =>
+    mutateAsync: async (input: CodeImprovementInput) =>
       askQuestion.mutateAsync({
         projectId: input.projectId,
         query: input.suggestions,
@@ -34,7 +40,7 @@ export function useApiMutations(): ApiMutations & { refetch: () => void } {
   };
 
   const reviewCode = {
-    mutateAsync: async (input: any) =>
+    mutateAsync: async (input: CodeReviewInput) =>
       askQuestion.mutateAsync({
         projectId: input.projectId,
         query: input.focusAreas || 'Perform comprehensive code review',
@@ -46,7 +52,7 @@ export function useApiMutations(): ApiMutations & { refetch: () => void } {
   };
 
   const debugCode = {
-    mutateAsync: async (input: any) =>
+    mutateAsync: async (input: DebugInput) =>
       askQuestion.mutateAsync({
         projectId: input.projectId,
         query: input.errorDescription,

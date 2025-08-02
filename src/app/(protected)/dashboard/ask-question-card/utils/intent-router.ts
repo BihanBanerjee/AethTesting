@@ -103,6 +103,7 @@ export async function routeIntentToHandler(
   switch (intent.type as IntentType) {
     case 'code_generation':
       result = await mutations.generateCode.mutateAsync({
+        intent: 'code_generation',
         projectId,
         prompt: question,
         context: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
@@ -116,6 +117,7 @@ export async function routeIntentToHandler(
 
     case 'code_improvement':
       result = await mutations.improveCode.mutateAsync({
+        intent: 'code_improvement',
         projectId,
         suggestions: question,
         targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
@@ -126,6 +128,7 @@ export async function routeIntentToHandler(
 
     case 'code_review':
       result = await mutations.reviewCode.mutateAsync({
+        intent: 'code_review',
         projectId,
         files: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles || [],
         reviewType: 'comprehensive',
@@ -136,9 +139,10 @@ export async function routeIntentToHandler(
 
     case 'debug':
       result = await mutations.debugCode.mutateAsync({
+        intent: 'debug',
         projectId,
         errorDescription: question,
-        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
+        suspectedFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
       });
 
       return transformToEnhancedResponse(result, intent, question, 'debug');

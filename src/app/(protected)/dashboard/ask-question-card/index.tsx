@@ -2,6 +2,7 @@
 'use client';
 
 import React from 'react';
+import type { QueryIntent } from '@/lib/intent-classifier';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 // import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
@@ -44,8 +45,8 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
       // First classify the intent - this will be visible to user
       const intent = await classifyQuery(state.question);
 
-      // Store the intent for display in UI
-      actions.setIntentPreview(intent);
+      // Store the intent for display in UI  
+      actions.setIntentPreview(intent as QueryIntent);
       actions.setProcessingStage('generating');
       
       // Route to appropriate handler
