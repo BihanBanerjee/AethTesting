@@ -515,14 +515,4 @@ export const analyticsService = {
     };
   },
 
-  async getQuestionStatistics(
-    ctx: ServiceContext,
-    input: {
-      projectId: string;
-      timeRange?: 'day' | 'week' | 'month' | 'all';
-    }
-  ) {
-    const timeRange = input.timeRange || 'month';
-    return await getQuestionStatistics(ctx.db, input.projectId, timeRange);
-  }
 };

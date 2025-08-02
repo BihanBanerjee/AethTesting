@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure} from "../trpc";
 import { pollCommits } from "@/lib/github";
 import { inngest } from "@/lib/inngest/client";
 import { analyticsService } from "../services/analytics-service";
+import { getQuestionStatistics } from "@/lib/intent/statistics";
 import { meetingService } from "../services/meeting-service";
 import { projectUtils } from "../services/project-utils";
 
@@ -429,7 +430,7 @@ export const projectRouter = createTRPCRouter({
             timeRange: z.enum(['day', 'week', 'month', 'all']).optional().default('month')
         })
     ).query(async ({ ctx, input }) => {
-        return await analyticsService.getQuestionStatistics(ctx, input);
+        return await getQuestionStatistics(ctx.db, input.projectId, input.timeRange);
     }),
     uploadMeeting: protectedProcedure.input(z.object({
         projectId: z.string(),
