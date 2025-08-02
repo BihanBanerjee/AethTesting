@@ -14,6 +14,8 @@ import AnalyticsDashboard from './components/analytics-dashboard/analytics-dashb
 import DeleteConfirmationDialog from './components/delete-confirmation-dialog/delete-confirmation-dialog';
 import { EnhancedQuestionModal } from './components/enhanced-question-modal';
 import ScrollbarStyles from './components/scrollbar-styles';
+import { AdvancedAnalyticsOverview } from './components/advanced-analytics';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Question } from './types/question';
 
 const EnhancedQAPage: React.FC = () => {
@@ -26,6 +28,7 @@ const EnhancedQAPage: React.FC = () => {
     sortOrder: 'desc' as 'asc' | 'desc'
   });
   const [activeTab, setActiveTab] = useState('questions');
+  const [analyticsMode, setAnalyticsMode] = useState<'basic' | 'advanced'>('basic');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
 
@@ -115,6 +118,18 @@ const EnhancedQAPage: React.FC = () => {
             <TabsTrigger value="questions">Questions & Answers</TabsTrigger>
             <TabsTrigger value="analytics">Analytics Dashboard</TabsTrigger>
           </TabsList>
+          
+          {activeTab === 'analytics' && (
+            <Select value={analyticsMode} onValueChange={(value) => setAnalyticsMode(value as 'basic' | 'advanced')}>
+              <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <TabsContent value="questions">
@@ -129,11 +144,18 @@ const EnhancedQAPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <AnalyticsDashboard
-            statistics={statistics}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
+          {analyticsMode === 'basic' ? (
+            <AnalyticsDashboard
+              statistics={statistics}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          ) : (
+            <AdvancedAnalyticsOverview
+              projectId={projectId}
+              timeRange={filters.timeRange}
+            />
+          )}
         </TabsContent>
       </Tabs>
       

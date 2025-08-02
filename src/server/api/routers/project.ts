@@ -477,5 +477,124 @@ export const projectRouter = createTRPCRouter({
         const fileCount = await projectUtils.checkProjectFileCount(input.githubUrl, input.githubToken);
         const userCredits = await projectUtils.getUserCredits(ctx);
         return { fileCount, userCredits: userCredits?.credits || 0 };
+    }),
+
+    // Feedback procedures
+    updateInteractionFeedback: protectedProcedure.input(
+        z.object({
+            interactionId: z.string(),
+            rating: z.number().min(1).max(5).optional(),
+            helpful: z.boolean().optional(),
+            feedback: z.string().optional(),
+        })
+    ).mutation(async ({ ctx, input }) => {
+        return await ctx.db.aiInteraction.update({
+            where: { 
+                id: input.interactionId,
+                userId: ctx.user.userId! // Ensure user can only update their own interactions
+            },
+            data: {
+                rating: input.rating,
+                helpful: input.helpful,
+                feedback: input.feedback,
+                updatedAt: new Date(),
+            }
+        });
+    }),
+
+    updateCodeGenerationFeedback: protectedProcedure.input(
+        z.object({
+            codeGenerationId: z.string(),
+            satisfaction: z.number().min(1).max(10).optional(),
+            applied: z.boolean().optional(),
+            modified: z.boolean().optional(),
+        })
+    ).mutation(async ({ ctx, input }) => {
+        return await ctx.db.codeGeneration.update({
+            where: { 
+                id: input.codeGenerationId,
+                userId: ctx.user.userId! // Ensure user can only update their own code generations
+            },
+            data: {
+                satisfaction: input.satisfaction,
+                applied: input.applied,
+                modified: input.modified,
+                updatedAt: new Date(),
+            }
+        });
+    }),
+
+    // Create AI interaction record for feedback tracking
+    createAiInteraction: protectedProcedure.input(
+        z.object({
+            projectId: z.string(),
+            intent: z.string(),
+            query: z.string(),
+            confidence: z.number().optional(),
+            contextFiles: z.any().optional(),
+            metadata: z.any().optional(),
+            responseType: z.string().optional(),
+            responseTime: z.number().optional(),
+            success: z.boolean().optional(),
+            tokenCount: z.number().optional(),
+            modelUsed: z.string().optional(),
+        })
+    ).mutation(async ({ ctx, input }) => {
+        return await ctx.db.aiInteraction.create({
+            data: {
+                projectId: input.projectId,
+                userId: ctx.user.userId!,
+                intent: input.intent,
+                query: input.query,
+                confidence: input.confidence,
+                contextFiles: input.contextFiles,
+                metadata: input.metadata,
+                responseType: input.responseType,
+                responseTime: input.responseTime,
+                success: input.success ?? true,
+                tokenCount: input.tokenCount,
+                modelUsed: input.modelUsed,
+            }
+        });
+    }),
+
+    // Create code generation record for feedback tracking
+    createCodeGeneration: protectedProcedure.input(
+        z.object({
+            projectId: z.string(),
+            prompt: z.string(),
+            intent: z.string(),
+            requirements: z.any().optional(),
+            contextFiles: z.any().optional(),
+            generatedCode: z.string().optional(),
+            filename: z.string().optional(),
+            language: z.string().optional(),
+            complexity: z.number().optional(),
+            linesOfCode: z.number().optional(),
+            modelUsed: z.string().optional(),
+            tokenCount: z.number().optional(),
+            generationTime: z.number().optional(),
+            timesSaved: z.number().optional(),
+        })
+    ).mutation(async ({ ctx, input }) => {
+        return await ctx.db.codeGeneration.create({
+            data: {
+                projectId: input.projectId,
+                userId: ctx.user.userId!,
+                prompt: input.prompt,
+                intent: input.intent,
+                requirements: input.requirements,
+                contextFiles: input.contextFiles,
+                generatedCode: input.generatedCode,
+                filename: input.filename,
+                language: input.language,
+                complexity: input.complexity,
+                linesOfCode: input.linesOfCode,
+                modelUsed: input.modelUsed,
+                tokenCount: input.tokenCount,
+                generationTime: input.generationTime,
+                timesSaved: input.timesSaved,
+            }
+        });
     })
 })

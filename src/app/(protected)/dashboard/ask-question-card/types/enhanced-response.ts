@@ -1,4 +1,20 @@
 // src/app/(protected)/dashboard/ask-question-card/types/enhanced-response.ts
+
+// Feedback-related interfaces
+export interface FeedbackData {
+  rating?: number;
+  helpful?: boolean;
+  feedback?: string;
+  interactionId?: string;
+}
+
+export interface CodeGenerationFeedback {
+  id: string;
+  satisfaction?: number;
+  applied?: boolean;
+  modified?: boolean;
+}
+
 export interface EnhancedResponse {
   type: 'answer' | 'code' | 'review' | 'debug' | 'explanation';
   content: string;
@@ -27,10 +43,15 @@ export interface EnhancedResponse {
     }>;
     files?: string[];
     warnings?: string[];
+    insights?: string[];        // Educational content (key points, explanations)
     dependencies?: string[];
   };
   filesReferences?: {fileName: string; sourceCode: string; summary: string}[];
   timestamp?: Date;
+  
+  // Feedback tracking fields
+  feedback?: FeedbackData;
+  codeGeneration?: CodeGenerationFeedback;
 }
 
 export type ProcessingStage = 'analyzing' | 'processing' | 'generating' | 'complete';
