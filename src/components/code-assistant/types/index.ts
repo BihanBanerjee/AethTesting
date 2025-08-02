@@ -30,6 +30,7 @@ export interface MessageMetadata {
   
   // Enhanced metadata for different response types
   warnings?: string[];
+  insights?: string[];        // Educational content (key points, explanations)
   dependencies?: string[];
   
   // Code generation specific metadata

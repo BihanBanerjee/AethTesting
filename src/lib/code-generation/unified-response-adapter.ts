@@ -1,6 +1,7 @@
 // src/lib/code-generation/unified-response-adapter.ts
 import type { CodeGenerationResult } from "./types";
 import type { UnifiedResponse, FileReference, Suggestion } from "@/types/unified-response";
+import { MessageClassifier } from "./message-classifier";
 
 /**
  * Adapter to transform CodeGenerationResult to UnifiedResponse format
@@ -27,7 +28,8 @@ export class UnifiedResponseAdapter {
       explanation: result.explanation,
       suggestions: this.transformWarningsToSuggestions(result.warnings || []),
       files: this.transformGeneratedFiles(result.files),
-      warnings: result.warnings || [],
+      warnings: MessageClassifier.filterUserFacingWarnings(result.warnings || []),
+      insights: MessageClassifier.extractInsights(result.warnings || []),
       dependencies: result.dependencies || [],
       diff: primaryFile?.diff
     };
@@ -140,9 +142,12 @@ export class UnifiedResponseAdapter {
    * Transform warnings array to Suggestion[]
    */
   private static transformWarningsToSuggestions(warnings: string[]): Suggestion[] {
-    return warnings.map(warning => ({
+    // Filter to only get actionable suggestions, avoid duplicating warnings
+    const suggestionMessages = MessageClassifier.filterUserFacingSuggestions(warnings);
+    
+    return suggestionMessages.map(message => ({
       type: 'improvement' as const,
-      description: warning,
+      description: message,
       priority: 'medium' as const
     }));
   }

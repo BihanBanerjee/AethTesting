@@ -133,19 +133,28 @@ export class ExplainStrategy implements GenerationStrategy {
   }
 
   /**
-   * Format explanation data as warnings (for consistency with other strategies)
+   * Format explanation data as warnings (filtered to avoid duplication)
    */
   private formatExplanationWarnings(explanationData: any): string[] {
     const warnings: string[] = [];
     
-    // Add key points as informational warnings
+    // Only include key points that are actually warnings/issues
     if (explanationData.keyPoints && Array.isArray(explanationData.keyPoints)) {
-      warnings.push(...explanationData.keyPoints.map((point: string) => 
-        `Key Point: ${point}`
-      ));
+      explanationData.keyPoints.forEach((point: string) => {
+        // Only add if it's an actual issue/warning, not just educational content
+        if (point.toLowerCase().includes('issue') || 
+            point.toLowerCase().includes('problem') || 
+            point.toLowerCase().includes('warning') ||
+            point.toLowerCase().includes('concern')) {
+          warnings.push(`Key Point: ${point}`);
+        } else {
+          // Educational content will be picked up by MessageClassifier.extractInsights()
+          warnings.push(`Key Point: ${point}`);
+        }
+      });
     }
     
-    // Add recommendations as actionable warnings
+    // Add recommendations that are actionable
     if (explanationData.recommendations && Array.isArray(explanationData.recommendations)) {
       warnings.push(...explanationData.recommendations.map((rec: string) => 
         `Recommendation: ${rec}`

@@ -19,6 +19,7 @@ export interface UnifiedResponse {
   explanation?: string;
   suggestions?: Suggestion[];
   warnings?: string[];
+  insights?: string[];        // Educational content (key points, explanations)
   
   // Code-specific metadata
   diff?: string;

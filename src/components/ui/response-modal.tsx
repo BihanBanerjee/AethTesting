@@ -302,6 +302,20 @@ export const ResponseModal: React.FC<ResponseModalProps> = ({
                                     </ul>
                                   </div>
                                 )}
+                                
+                                {response.metadata.insights && response.metadata.insights.length > 0 && (
+                                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 text-green-300 mb-2">
+                                      <InfoIcon className="h-4 w-4" />
+                                      <span className="font-medium">Insights</span>
+                                    </div>
+                                    <ul className="text-sm text-green-200 space-y-1">
+                                      {response.metadata.insights.map((insight, index) => (
+                                        <li key={index}>• {insight}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
