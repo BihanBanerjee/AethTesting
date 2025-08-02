@@ -1,5 +1,5 @@
 // src/app/(protected)/dashboard/ask-question-card/hooks/use-question-state.ts
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { QuestionState, EnhancedResponse, ActiveTab, ProcessingStage } from '../types/enhanced-response';
 import type { QueryIntent } from '@/lib/intent-classifier';
@@ -43,12 +43,12 @@ export function useQuestionState() {
   const { user, isLoaded } = useUser();
   
   // Wait for Clerk to load before creating storage key
-  const storageKey = isLoaded && user?.id ? `Aetheria-askResponse-${user.id}` : null;
+  const storageKey = useMemo(() => 
+    isLoaded && user?.id ? `Aetheria-askResponse-${user.id}` : null, 
+    [isLoaded, user?.id]
+  );
   
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 Clerk state:', { isLoaded, userId: user?.id, storageKey });
-  }, [isLoaded, user?.id, storageKey]);
+  // Debug logging - removed to prevent unnecessary re-renders
   
   // Flag to prevent infinite loop between restore and persist
   const [isRestoring, setIsRestoring] = useState(false);
@@ -65,6 +65,21 @@ export function useQuestionState() {
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+
+  // Memoize setter functions to prevent unnecessary re-renders
+  const setters = useMemo(() => ({
+    setOpen,
+    setQuestion,
+    setLoading,
+    setResponse,
+    setActiveTab,
+    setIntentPreview,
+    setProcessingStage,
+    setSelectedFiles,
+    setAvailableFiles,
+    setShowModal,
+    setStreamingContent,
+  }), []);
 
   // Restore state directly from localStorage when storage key is ready (only once)
   useEffect(() => {
@@ -90,30 +105,35 @@ export function useQuestionState() {
   }, [storageKey]);
 
   // Function to clear persisted state (when answer is saved or manually cleared)
-  const clearPersistedState = () => {
+  const clearPersistedState = useCallback(() => {
     if (storageKey) {
       saveToLocalStorage(storageKey, null);
     }
-  };
+  }, [storageKey]);
 
-  // Persist state only when response changes (not on every render)
+  // Persist state only when response changes - use refs to avoid dependency issues
   const lastResponseRef = useRef<EnhancedResponse | null>(null);
+  const stateRef = useRef({ question, activeTab, intentPreview, selectedFiles });
+  
+  // Update state ref on every render
+  stateRef.current = { question, activeTab, intentPreview, selectedFiles };
+  
   useEffect(() => {
-    if (storageKey && !isRestoring && hasRestoredRef.current && response !== lastResponseRef.current) {
+    if (response !== lastResponseRef.current && storageKey && !isRestoring && hasRestoredRef.current) {
       const stateToSave: PersistedResponseState = {
-        question,
+        question: stateRef.current.question,
         response,
-        activeTab,
-        intentPreview,
-        selectedFiles,
+        activeTab: stateRef.current.activeTab,
+        intentPreview: stateRef.current.intentPreview,
+        selectedFiles: stateRef.current.selectedFiles,
       };
       console.log('💾 Persisting state (response changed):', stateToSave);
       saveToLocalStorage(storageKey, stateToSave);
       lastResponseRef.current = response;
     }
-  }, [response, question, activeTab, intentPreview, selectedFiles, isRestoring, storageKey]);
+  }, [response, storageKey, isRestoring]);
 
-  const resetState = () => {
+  const resetState = useCallback(() => {
     setQuestion('');
     setLoading(false);
     setResponse(null);
@@ -127,7 +147,7 @@ export function useQuestionState() {
     clearPersistedState();
     // Reset restoration flag
     hasRestoredRef.current = false;
-  };
+  }, [clearPersistedState]);
 
   const state: QuestionState = {
     open,
@@ -143,21 +163,11 @@ export function useQuestionState() {
     streamingContent,
   };
 
-  const actions = {
-    setOpen,
-    setQuestion,
-    setLoading,
-    setResponse,
-    setActiveTab,
-    setIntentPreview,
-    setProcessingStage,
-    setSelectedFiles,
-    setAvailableFiles,
-    setShowModal,
-    setStreamingContent,
+  const actions = useMemo(() => ({
+    ...setters,
     resetState,
     clearPersistedState,
-  };
+  }), [setters, resetState, clearPersistedState]);
 
   return { state, actions };
 }

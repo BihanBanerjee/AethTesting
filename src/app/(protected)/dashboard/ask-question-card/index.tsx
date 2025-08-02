@@ -1,7 +1,7 @@
 // src/app/(protected)/dashboard/ask-question-card/index.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { QueryIntent } from '@/lib/intent-classifier';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 // Import hooks
 import { useQuestionState } from './hooks/use-question-state';
 import { useApiMutations } from './hooks/use-api-mutations';
-import { useIntentHandling } from './hooks/use-intent-handling';
+import { useProjectContext } from '@/hooks/use-project-context';
+import { useProjectFiles } from '@/hooks/use-project-files';
+import { useIntentClassification } from '@/hooks/use-intent-classification';
 
 // Import components
 import { QuestionInput } from './components/question-input';
@@ -26,12 +28,15 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
   const { state, actions } = useQuestionState();
   const mutations = useApiMutations();
   
-  const { project, isReady, classifyQuery } = useIntentHandling({
-    state,
-    setIntentPreview: actions.setIntentPreview,
-    setProcessingStage: actions.setProcessingStage,
-    setAvailableFiles: actions.setAvailableFiles,
-  });
+  // Use focused hooks for better separation of concerns
+  const { project, isReady } = useProjectContext();
+  const { fileNames } = useProjectFiles();
+  const { classifyQuery } = useIntentClassification();
+
+  // Sync available files with component state
+  useEffect(() => {
+    actions.setAvailableFiles(fileNames);
+  }, [fileNames, actions.setAvailableFiles]);
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
