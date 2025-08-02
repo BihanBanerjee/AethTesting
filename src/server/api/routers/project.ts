@@ -5,6 +5,7 @@ import { inngest } from "@/lib/inngest/client";
 import { analyticsService } from "../services/analytics-service";
 import { getQuestionStatistics } from "@/lib/intent/statistics";
 import { meetingService } from "../services/meeting-service";
+import { feedbackService } from "../services/feedback-service";
 import { projectUtils } from "../services/project-utils";
 
 export const projectRouter = createTRPCRouter({
@@ -112,7 +113,7 @@ export const projectRouter = createTRPCRouter({
             // Explain specific parameters
             detailLevel: z.enum(['brief', 'detailed', 'comprehensive']).optional()
         })
-    ).mutation(async ({ ctx, input }) => {
+    ).mutation(async ({ input }) => {
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         const classifier = new IntentClassifier();
 
@@ -193,7 +194,7 @@ export const projectRouter = createTRPCRouter({
             projectId: z.string(),
             query: z.string(),
         })
-    ).mutation(async ({ ctx, input }) => {
+    ).mutation(async ({ input }) => {
         const { IntentClassifier } = await import('@/lib/intent-classifier');
         const classifier = new IntentClassifier();
 
@@ -489,18 +490,7 @@ export const projectRouter = createTRPCRouter({
             feedback: z.string().optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        return await ctx.db.aiInteraction.update({
-            where: { 
-                id: input.interactionId,
-                userId: ctx.user.userId! // Ensure user can only update their own interactions
-            },
-            data: {
-                rating: input.rating,
-                helpful: input.helpful,
-                feedback: input.feedback,
-                updatedAt: new Date(),
-            }
-        });
+        return await feedbackService.updateInteractionFeedback(ctx, input);
     }),
 
     updateCodeGenerationFeedback: protectedProcedure.input(
@@ -511,18 +501,7 @@ export const projectRouter = createTRPCRouter({
             modified: z.boolean().optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        return await ctx.db.codeGeneration.update({
-            where: { 
-                id: input.codeGenerationId,
-                userId: ctx.user.userId! // Ensure user can only update their own code generations
-            },
-            data: {
-                satisfaction: input.satisfaction,
-                applied: input.applied,
-                modified: input.modified,
-                updatedAt: new Date(),
-            }
-        });
+        return await feedbackService.updateCodeGenerationFeedback(ctx, input);
     }),
 
     // Create AI interaction record for feedback tracking
@@ -541,22 +520,7 @@ export const projectRouter = createTRPCRouter({
             modelUsed: z.string().optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        return await ctx.db.aiInteraction.create({
-            data: {
-                projectId: input.projectId,
-                userId: ctx.user.userId!,
-                intent: input.intent,
-                query: input.query,
-                confidence: input.confidence,
-                contextFiles: input.contextFiles,
-                metadata: input.metadata,
-                responseType: input.responseType,
-                responseTime: input.responseTime,
-                success: input.success ?? true,
-                tokenCount: input.tokenCount,
-                modelUsed: input.modelUsed,
-            }
-        });
+        return await feedbackService.createAiInteraction(ctx, input);
     }),
 
     // Create code generation record for feedback tracking
@@ -578,24 +542,6 @@ export const projectRouter = createTRPCRouter({
             timesSaved: z.number().optional(),
         })
     ).mutation(async ({ ctx, input }) => {
-        return await ctx.db.codeGeneration.create({
-            data: {
-                projectId: input.projectId,
-                userId: ctx.user.userId!,
-                prompt: input.prompt,
-                intent: input.intent,
-                requirements: input.requirements,
-                contextFiles: input.contextFiles,
-                generatedCode: input.generatedCode,
-                filename: input.filename,
-                language: input.language,
-                complexity: input.complexity,
-                linesOfCode: input.linesOfCode,
-                modelUsed: input.modelUsed,
-                tokenCount: input.tokenCount,
-                generationTime: input.generationTime,
-                timesSaved: input.timesSaved,
-            }
-        });
+        return await feedbackService.createCodeGeneration(ctx, input);
     })
 })
