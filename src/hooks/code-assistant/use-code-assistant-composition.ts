@@ -127,8 +127,7 @@ export function useCodeAssistantComposition(): CodeAssistantComposition {
     codeAssistant.currentIntent,
     codeAssistant.processingStage,
     codeAssistant.progress,
-    codeAssistant.messagesEndRef,
-    codeAssistant.textareaRef,
+    // Removed refs: messagesEndRef, textareaRef (cause unnecessary re-renders)
     codeAssistant.handleSendMessage,
     codeAssistant.handleKeyPress,
     codeAssistant.routeIntentToAPI,

@@ -58,20 +58,8 @@ export const useFeedbackPersistence = () => {
     }
   }, [updateCodeFeedback]);
 
-  const saveFeedback = useCallback(async (
-    type: 'interaction' | 'codeGeneration',
-    id: string,
-    feedback: InteractionFeedbackData | CodeGenerationFeedbackData
-  ) => {
-    if (type === 'interaction') {
-      return await saveInteractionFeedback(id, feedback as InteractionFeedbackData);
-    } else {
-      return await saveCodeGenerationFeedback(id, feedback as CodeGenerationFeedbackData);
-    }
-  }, [saveInteractionFeedback, saveCodeGenerationFeedback]);
 
   return {
-    saveFeedback,
     saveInteractionFeedback,
     saveCodeGenerationFeedback,
     isLoading: updateInteractionFeedback.isPending || updateCodeFeedback.isPending,

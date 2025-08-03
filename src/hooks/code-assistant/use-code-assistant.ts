@@ -9,7 +9,6 @@ import { useFileSelection } from './use-file-selection';
 import { useProcessingStates } from './use-processing-states';
 import { useAPIRouting } from './use-api-routing';
 import { extractResponseContent, extractResponseMetadata } from '../utils/response-processors';
-import { throttledRequest } from '../utils/request-throttle';
 import { api } from '@/trpc/react';
 import type { ActiveTab, IntentType, Message } from '@/components/code-assistant/types';
 import type { CodeAssistantHookReturn } from '../types/use-code-assistant.types';
@@ -53,13 +52,10 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
       try {
         // Use dedicated tRPC route for accurate intent classification
         console.log('🎯 Using dedicated tRPC route for intent classification');
-        const classificationResult = await throttledRequest(
-          () => serverClassifyMutation.mutateAsync({
-            projectId: project.id,
-            query: messageState.input,
-          }),
-          'intent classification'
-        );
+        const classificationResult = await serverClassifyMutation.mutateAsync({
+          projectId: project.id,
+          query: messageState.input,
+        });
         intent = classificationResult.intent;
         console.log('✅ Server-side classification successful:', intent.type);
       } catch (error) {
@@ -78,11 +74,8 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
       processingState.setProcessingStage('processing');
       processingState.setProgress(50);
 
-      // Step 2: Route to appropriate handler based on intent (with throttling)
-      const response = await throttledRequest(
-        () => apiRouting.routeIntentToAPI(intent, messageState.input, project.id),
-        `${intent.type} request`
-      );
+      // Step 2: Route to appropriate handler based on intent
+      const response = await apiRouting.routeIntentToAPI(intent, messageState.input, project.id);
 
       console.log('Raw API response:', response);
       console.log('Response type:', typeof response);

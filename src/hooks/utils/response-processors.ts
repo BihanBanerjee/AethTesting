@@ -4,7 +4,7 @@ import type { StreamableValue } from 'ai/rsc';
 import { ResponseTransformer, type UnifiedResponse } from '@/lib/code-generation/response-types';
 
 // Helper function to safely handle potentially malformed responses
-export function safelyProcessResponse<T>(
+function safelyProcessResponse<T>(
   processor: () => T,
   fallback: T,
   context: string = 'response processing'
@@ -18,7 +18,7 @@ export function safelyProcessResponse<T>(
 }
 
 // Helper function to validate response structure
-export function validateResponse(response: unknown): boolean {
+function validateResponse(response: unknown): boolean {
   if (!response || typeof response !== 'object') {
     return false;
   }
@@ -40,7 +40,7 @@ export function validateResponse(response: unknown): boolean {
 }
 
 // Helper function to detect language from file extensions
-export function detectLanguageFromFiles(files: string[]): string {
+function detectLanguageFromFiles(files: string[]): string {
   if (!files || files.length === 0) return 'typescript';
   
   // Get the first file's extension
@@ -257,7 +257,7 @@ export function extractResponseContent(response: unknown): string | StreamableVa
 }
 
 // Helper function to detect response type based on available fields
-export function detectResponseType(response: unknown, intent?: string): string {
+function detectResponseType(response: unknown, intent?: string): string {
   const res = response as APIResponse;
   
   // Use intent as primary indicator if available

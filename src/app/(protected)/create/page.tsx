@@ -1,6 +1,11 @@
 // src/app/(protected)/create/page.tsx
 'use client';
-import React, { useState } from 'react';
+
+// Note: This page uses direct API calls instead of custom hooks
+// due to its simple form-based nature. Complex pages (dashboard, 
+// code-assistant, billing) use dedicated hook compositions.
+
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useRefetch from '@/hooks/use-refetch';
 import { api } from '@/trpc/react';
@@ -36,7 +41,7 @@ const CreatePage = () => {
   const repoUrl = watch('repoUrl');
   const githubToken = watch('githubToken');
   
-  function onSubmit(data: FormInput) {
+  const onSubmit = useCallback((data: FormInput) => {
     if (!!checkCredits.data) {
       createProject.mutate({
         name: data.projectName,
@@ -62,7 +67,7 @@ const CreatePage = () => {
       // Move to credits review step
       setActiveStep(2);
     }
-  }
+  }, [checkCredits.data, createProject, checkCredits, refetch, reset]);
 
   const hasEnoughCredits = checkCredits?.data?.userCredits 
     ? checkCredits?.data?.fileCount <= checkCredits?.data?.userCredits 

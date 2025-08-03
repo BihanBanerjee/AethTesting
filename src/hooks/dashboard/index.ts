@@ -1,20 +1,8 @@
-export { useQuestionInput } from './use-question-input';
-export { useResponseState } from './use-response-state';
-export { useQuestionUIState } from './use-question-ui-state';
+// Only export hooks that are actually used outside this module
 export { useDashboardComposition } from './use-dashboard-composition';
+export { useIntentClassification } from './use-intent-classification';
 
-export type {
-  QuestionInputState,
-} from './use-question-input';
-
-export type {
-  ResponseState,
-} from './use-response-state';
-
-export type {
-  QuestionUIState,
-} from './use-question-ui-state';
-
+// Only export types that are actually used outside this module
 export type {
   DashboardComposition,
 } from './use-dashboard-composition';

@@ -1,4 +1,4 @@
-// src/hooks/use-intent-classification.ts
+// src/hooks/dashboard/use-intent-classification.ts
 import { useCallback } from 'react';
 import { api } from '@/trpc/react';
 import useProject from '@/hooks/use-project';

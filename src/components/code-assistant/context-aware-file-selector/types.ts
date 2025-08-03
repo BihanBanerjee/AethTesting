@@ -8,6 +8,9 @@ export interface ContextAwareFileSelectorProps {
 export interface FileSearchProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  placeholder?: string;
 }
 
 export interface SuggestedFilesPanelProps {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import type { EnhancedResponse, ActiveTab } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import type { QueryIntent } from '@/lib/intent-classifier';
@@ -76,7 +76,7 @@ export function useResponseState(): ResponseState {
     }
   }, [storageKey]);
 
-  const restorePersistedState = useCallback((question: string, selectedFiles: string[]): boolean => {
+  const restorePersistedState = useCallback((): boolean => {
     if (storageKey && !hasRestoredRef.current) {
       console.log('🔄 Restoration check - loading from localStorage:', { storageKey });
       

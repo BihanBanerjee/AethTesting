@@ -36,11 +36,21 @@ export function useUnifiedIntentRouting() {
     contextFiles: string[] = []
   ) => {
     // Build base request data
-    const requestData: any = {
+    const requestData = {
       projectId,
       query,
       contextFiles: contextFiles.length > 0 ? contextFiles : intent.targetFiles || [],
-      intent: intent.type
+      intent: intent.type,
+      // Intent-specific optional parameters
+      requirements: undefined as { framework?: string; language?: string; features?: string[]; constraints?: string[] } | undefined,
+      improvementType: undefined as 'performance' | 'readability' | 'security' | 'optimization' | undefined,
+      reviewType: undefined as 'security' | 'performance' | 'comprehensive' | undefined,
+      focusAreas: undefined as string | undefined,
+      errorDescription: undefined as string | undefined,
+      contextLevel: undefined as 'file' | 'function' | 'project' | 'global' | undefined,
+      refactoringGoals: undefined as string | undefined,
+      preserveAPI: undefined as boolean | undefined,
+      detailLevel: undefined as 'brief' | 'detailed' | 'comprehensive' | undefined
     };
 
     // Add intent-specific parameters

@@ -5,7 +5,7 @@ import React from 'react';
 import type { QueryIntent } from '@/lib/intent-classifier';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
-// import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
+import { ContextAwareFileSelector } from '@/components/code-assistant/context-aware-file-selector';
 import { MessageSquare, Sparkles, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { useDashboardState, useDashboardActions } from '@/contexts/dashboard-context';
 import { useApiMutations } from './hooks/use-api-mutations';
 import useProject from '@/hooks/use-project';
-import { useIntentClassification } from '@/hooks/use-intent-classification';
+import { useIntentClassification } from '@/hooks/dashboard';
 
 // Import components
 import { QuestionInput } from './components/question-input';
@@ -149,7 +149,19 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
           projectId={project?.id}
         />
 
-        {/* Context aware file selector temporarily disabled due to prop interface mismatch */}
+        {/* File Selection Component */}
+        {state.availableFiles.length > 0 && (
+          <div className="mt-4">
+            <ContextAwareFileSelector
+              availableFiles={state.availableFiles}
+              selectedFiles={state.selectedFiles}
+              onFileSelectionChange={actions.setSelectedFiles}
+              currentQuery={state.question}
+            />
+          </div>
+        )}
+
+        {/* Selected Files Display */}
         {state.selectedFiles.length > 0 && (
           <div className="mt-4 p-2 bg-white/5 rounded-lg">
             <div className="text-sm text-white/70 mb-2">Selected Files:</div>
