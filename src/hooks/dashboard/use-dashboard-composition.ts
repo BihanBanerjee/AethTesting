@@ -1,0 +1,107 @@
+import { useEffect, useMemo, useCallback } from 'react';
+import { useQuestionInput } from './use-question-input';
+import { useResponseState } from './use-response-state';
+import { useQuestionUIState } from './use-question-ui-state';
+import { useUnifiedFileSelection } from '../use-unified-file-selection';
+import type { QuestionState } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
+
+export interface DashboardComposition {
+  state: QuestionState;
+  actions: {
+    setOpen: (open: boolean) => void;
+    setQuestion: (question: string) => void;
+    setLoading: (loading: boolean) => void;
+    setResponse: (response: any) => void;
+    setActiveTab: (tab: any) => void;
+    setIntentPreview: (intent: any) => void;
+    setProcessingStage: (stage: any) => void;
+    setSelectedFiles: (files: string[]) => void;
+    setShowModal: (show: boolean) => void;
+    setStreamingContent: (content: string) => void;
+    resetState: () => void;
+    clearPersistedState: () => void;
+  };
+}
+
+export function useDashboardComposition(): DashboardComposition {
+  const questionInput = useQuestionInput();
+  const responseState = useResponseState() as any; // Type assertion to handle persistState
+  const uiState = useQuestionUIState();
+  const fileSelection = useUnifiedFileSelection();
+
+  // Restore persisted state on mount (only once)
+  useEffect(() => {
+    responseState.restorePersistedState(questionInput.question, fileSelection.selectedFiles);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [responseState.restorePersistedState]);
+
+  // Persist state when response changes
+  useEffect(() => {
+    if (responseState.persistState) {
+      responseState.persistState(questionInput.question, fileSelection.selectedFiles);
+    }
+  }, [responseState.response, responseState.persistState, questionInput.question, fileSelection.selectedFiles]);
+
+  const resetState = useCallback(() => {
+    questionInput.clearQuestion();
+    responseState.clearResponse();
+    uiState.closeAllModals();
+    fileSelection.clearSelection();
+  }, [questionInput, responseState, uiState, fileSelection]);
+
+  const state: QuestionState = useMemo(() => ({
+    open: uiState.open,
+    question: questionInput.question,
+    loading: responseState.loading,
+    response: responseState.response,
+    activeTab: responseState.activeTab,
+    intentPreview: responseState.intentPreview,
+    processingStage: uiState.processingStage,
+    selectedFiles: fileSelection.selectedFiles,
+    availableFiles: fileSelection.availableFiles,
+    showModal: uiState.showModal,
+    streamingContent: responseState.streamingContent,
+  }), [
+    uiState.open,
+    questionInput.question,
+    responseState.loading,
+    responseState.response,
+    responseState.activeTab,
+    responseState.intentPreview,
+    uiState.processingStage,
+    fileSelection.selectedFiles,
+    fileSelection.availableFiles,
+    uiState.showModal,
+    responseState.streamingContent,
+  ]);
+
+  const actions = useMemo(() => ({
+    setOpen: uiState.setOpen,
+    setQuestion: questionInput.setQuestion,
+    setLoading: responseState.setLoading,
+    setResponse: responseState.setResponse,
+    setActiveTab: responseState.setActiveTab,
+    setIntentPreview: responseState.setIntentPreview,
+    setProcessingStage: uiState.setProcessingStage,
+    setSelectedFiles: fileSelection.setSelectedFiles,
+    setShowModal: uiState.setShowModal,
+    setStreamingContent: responseState.setStreamingContent,
+    resetState,
+    clearPersistedState: responseState.clearPersistedState,
+  }), [
+    uiState.setOpen,
+    questionInput.setQuestion,
+    responseState.setLoading,
+    responseState.setResponse,
+    responseState.setActiveTab,
+    responseState.setIntentPreview,
+    uiState.setProcessingStage,
+    fileSelection.setSelectedFiles,
+    uiState.setShowModal,
+    responseState.setStreamingContent,
+    resetState,
+    responseState.clearPersistedState,
+  ]);
+
+  return { state, actions };
+}
