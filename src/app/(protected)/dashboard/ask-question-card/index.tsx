@@ -1,7 +1,7 @@
 // src/app/(protected)/dashboard/ask-question-card/index.tsx
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import type { QueryIntent } from '@/lib/intent-classifier';
 import { toast } from 'sonner';
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
@@ -10,10 +10,9 @@ import { MessageSquare, Sparkles, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Import hooks
-import { useQuestionState } from './hooks/use-question-state';
+import { useDashboardState, useDashboardActions } from '@/contexts/dashboard-context';
 import { useApiMutations } from './hooks/use-api-mutations';
-import { useProjectContext } from '@/hooks/use-project-context';
-import { useProjectFiles } from '@/hooks/use-project-files';
+import useProject from '@/hooks/use-project';
 import { useIntentClassification } from '@/hooks/use-intent-classification';
 
 // Import components
@@ -25,19 +24,18 @@ import { ResponseModal } from '@/components/ui/response-modal';
 import { routeIntentToHandler } from './utils/intent-router';
 
 const EnhancedAskQuestionCardContent: React.FC = () => {
-  const { state, actions } = useQuestionState();
+  const state = useDashboardState();
+  const actions = useDashboardActions();
   const mutations = useApiMutations();
   
   // Use focused hooks for better separation of concerns
-  const { project, isReady } = useProjectContext();
-  const { fileNames } = useProjectFiles();
+  const { project } = useProject();
   const { classifyQuery } = useIntentClassification();
+  
+  // Simple readiness check (replacing useProjectContext)
+  const isReady = !!(project?.id && project?.status);
 
-  // Sync available files with component state
-  useEffect(() => {
-    actions.setAvailableFiles(fileNames);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileNames, actions.setAvailableFiles]);
+  // Available files are automatically synced through useProjectFiles in the unified file selection hook
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -75,7 +73,7 @@ const EnhancedAskQuestionCardContent: React.FC = () => {
     }
   };
 
-  const handleSaveAnswer = async (questionId: string, answer: string, rating: number) => {
+  const handleSaveAnswer = async (_questionId: string, answer: string, rating: number) => {
     if (!project?.id) return;
 
     try {

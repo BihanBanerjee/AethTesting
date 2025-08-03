@@ -1,11 +1,5 @@
 // src/app/(protected)/dashboard/ask-question-card/types/enhanced-response.ts
 import type { QueryIntent } from '@/lib/intent-classifier';
-import type { 
-  CodeGenerationInput, 
-  CodeImprovementInput, 
-  CodeReviewInput, 
-  DebugInput 
-} from '@/lib/intent-classifier/input-types';
 import type { FileReference } from '../../actions/types/action-types';
 
 // Feedback-related interfaces
@@ -86,18 +80,6 @@ export type { FileReference, IntentType } from '../../actions/types/action-types
 export interface ApiMutations {
   askQuestion: {
     mutateAsync: (input: any) => Promise<any>;
-  };
-  generateCode: {
-    mutateAsync: (input: CodeGenerationInput) => Promise<any>;
-  };
-  improveCode: {
-    mutateAsync: (input: CodeImprovementInput) => Promise<any>;
-  };
-  reviewCode: {
-    mutateAsync: (input: CodeReviewInput) => Promise<any>;
-  };
-  debugCode: {
-    mutateAsync: (input: DebugInput) => Promise<any>;
   };
   saveAnswer: {
     mutateAsync: (input: any) => Promise<any>;

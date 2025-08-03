@@ -12,7 +12,6 @@ import {
   Zap,
   Bug,
   Search,
-  Sparkles,
   Wrench,
 } from 'lucide-react';
 

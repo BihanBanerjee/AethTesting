@@ -10,7 +10,10 @@ import CommitLoader from "./commit-loader";
 
 const CommitLog = () => {
     const { projectId, project } = useProject();
-    const { data: commits, isLoading } = api.project.getCommits.useQuery({ projectId });
+    const { data: commits, isLoading } = api.project.getCommits.useQuery(
+        { projectId }, 
+        { enabled: !!projectId }
+    );
 
     // Show loader while commits are being fetched
     if (isLoading) {

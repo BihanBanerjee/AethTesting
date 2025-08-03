@@ -7,7 +7,10 @@ import { motion } from 'framer-motion';
 
 const TeamMembers = () => {
     const { projectId } = useProject();
-    const { data: members } = api.project.getTeamMembers.useQuery({ projectId })
+    const { data: members } = api.project.getTeamMembers.useQuery(
+        { projectId }, 
+        { enabled: !!projectId }
+    )
     
     if (!members || members.length === 0) {
         return null;
