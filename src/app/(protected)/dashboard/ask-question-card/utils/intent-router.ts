@@ -97,100 +97,84 @@ export async function routeIntentToHandler(
   mutations: ApiMutations
 ): Promise<EnhancedResponse> {
   
-  // All requests now go through the unified askQuestion mutation
-  // The wrapper mutations in useApiMutations handle the intent-specific parameters
-  let result: any;
+  // Use the unified routing by calling askQuestion directly with all parameters
+  const contextFiles = selectedFiles.length > 0 ? selectedFiles : intent.targetFiles;
   
+  // Build request based on intent type
+  let requestData: any = {
+    projectId,
+    query: question,
+    contextFiles,
+    intent: intent.type
+  };
+
+  // Add intent-specific parameters
   switch (intent.type as IntentType) {
     case 'code_generation':
-      result = await mutations.generateCode.mutateAsync({
-        intent: 'code_generation',
-        projectId,
-        prompt: question,
-        context: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
-        requirements: {
-          framework: 'react',
-          language: 'typescript'
-        }
-      });
-
-      return transformToEnhancedResponse(result, intent, question, 'code');
+      requestData.requirements = {
+        framework: 'react',
+        language: 'typescript'
+      };
+      break;
 
     case 'code_improvement':
-      result = await mutations.improveCode.mutateAsync({
-        intent: 'code_improvement',
-        projectId,
-        suggestions: question,
-        targetFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
-        improvementType: 'optimization'
-      });
-
-      return transformToEnhancedResponse(result, intent, question, 'code');
+      requestData.improvementType = 'optimization';
+      break;
 
     case 'code_review':
-      result = await mutations.reviewCode.mutateAsync({
-        intent: 'code_review',
-        projectId,
-        files: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles || [],
-        reviewType: 'comprehensive',
-        focusAreas: question
-      });
-
-      return transformToEnhancedResponse(result, intent, question, 'review');
+      requestData.reviewType = 'comprehensive';
+      requestData.focusAreas = question;
+      break;
 
     case 'debug':
-      result = await mutations.debugCode.mutateAsync({
-        intent: 'debug',
-        projectId,
-        errorDescription: question,
-        suspectedFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles
-      });
-
-      return transformToEnhancedResponse(result, intent, question, 'debug');
+      requestData.errorDescription = question;
+      requestData.contextLevel = 'project';
+      break;
 
     case 'refactor':
-      // Add refactor case that was missing
-      result = await mutations.askQuestion.mutateAsync({
-        projectId,
-        query: question,
-        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
-        intent: 'refactor',
-        refactoringGoals: question,
-        preserveAPI: true
-      });
-
-      return transformToEnhancedResponse(result, intent, question, 'code');
+      requestData.refactoringGoals = question;
+      requestData.preserveAPI = true;
+      break;
 
     case 'explain':
-      // Add explain case that was missing
-      result = await mutations.askQuestion.mutateAsync({
-        projectId,
-        query: question,
-        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
-        intent: 'explain',
-        detailLevel: 'detailed'
-      });
+      requestData.detailLevel = 'detailed';
+      break;
+  }
 
-      return transformToEnhancedResponse(result, intent, question, 'answer');
+  // Single call to unified endpoint
+  const result = await mutations.askQuestion.mutateAsync(requestData);
+  
+  // Handle response transformation based on intent type
+  const responseType = getResponseType(intent.type as IntentType);
+  
+  if (responseType === 'answer' && intent.type === 'question') {
+    const content = await processStreamableValue(result);
+    return {
+      type: 'answer',
+      content,
+      intent,
+      filesReferences: result.filesReferences || []
+    };
+  }
+  
+  return transformToEnhancedResponse(result, intent, question, responseType);
+}
 
+// Helper function to determine response type
+function getResponseType(intentType: IntentType): 'code' | 'review' | 'debug' | 'answer' {
+  switch (intentType) {
+    case 'code_generation':
+    case 'code_improvement':
+    case 'refactor':
+      return 'code';
+    case 'code_review':
+      return 'review';
+    case 'debug':
+      return 'debug';
+    case 'explain':
     case 'question':
     default:
-      // Fallback to regular Q&A
-      result = await mutations.askQuestion.mutateAsync({
-        projectId,
-        query: question,
-        contextFiles: selectedFiles.length > 0 ? selectedFiles : intent.targetFiles,
-        intent: intent.type || 'question'
-      });
-
-      const content = await processStreamableValue(result);
-
-      return {
-        type: 'answer',
-        content,
-        intent,
-        filesReferences: result.filesReferences || []
-      };
+      return 'answer';
   }
 }
 
