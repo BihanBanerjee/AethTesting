@@ -6,6 +6,7 @@ import type {
   CodeReviewInput, 
   DebugInput 
 } from '@/lib/intent-classifier/input-types';
+import type { FileReference } from '../../actions/types/action-types';
 
 // Feedback-related interfaces
 export interface FeedbackData {
@@ -65,8 +66,6 @@ export type ProcessingStage = 'analyzing' | 'processing' | 'generating' | 'compl
 
 export type ActiveTab = 'response' | 'code' | 'files';
 
-export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain';
-
 export interface QuestionState {
   open: boolean;
   question: string;
@@ -81,11 +80,8 @@ export interface QuestionState {
   streamingContent: string;
 }
 
-export interface FileReference {
-  fileName: string;
-  sourceCode: string;
-  summary: string;
-}
+// Re-export types from action-types to avoid duplication
+export type { FileReference, IntentType } from '../../actions/types/action-types';
 
 export interface ApiMutations {
   askQuestion: {

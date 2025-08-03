@@ -1,4 +1,6 @@
 // src/app/(protected)/dashboard/actions/types/requirements.ts
+import type { ImprovementType } from './action-types';
+
 export interface CodeGenerationRequirements {
   framework?: string;
   language?: string;
@@ -16,7 +18,7 @@ export interface ImprovementRequirements {
   code: string;
   improvementGoals: string;
   projectId: string;
-  improvementType: 'performance' | 'readability' | 'security' | 'optimization';
+  improvementType: ImprovementType;
 }
 
 export interface QuestionRequirements {

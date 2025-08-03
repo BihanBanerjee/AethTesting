@@ -1,5 +1,6 @@
 // src/app/(protected)/dashboard/ask-question-card/utils/intent-router.ts
-import type { EnhancedResponse, IntentType, ApiMutations } from '../types/enhanced-response';
+import type { EnhancedResponse, ApiMutations } from '../types/enhanced-response';
+import type { IntentType } from '../../actions/types/action-types';
 
 export function extractSimpleContent(result: any): string {
   if (typeof result === 'string') return result;

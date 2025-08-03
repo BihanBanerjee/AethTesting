@@ -1,3 +1,5 @@
+import type { FileReference } from '@/app/(protected)/dashboard/actions/types/action-types';
+
 export interface EnhancedResponse {
   type: 'answer' | 'code' | 'review' | 'debug' | 'explanation';
   content: string;
@@ -37,11 +39,8 @@ export interface Project {
   name: string;
 }
 
-export interface FileReference {
-  fileName: string;
-  sourceCode: string;
-  summary: string;
-}
+// Re-export FileReference from action-types to avoid duplication
+export type { FileReference } from '@/app/(protected)/dashboard/actions/types/action-types';
 
 export interface FeedbackData {
   rating?: number;

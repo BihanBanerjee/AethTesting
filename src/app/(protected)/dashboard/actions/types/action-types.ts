@@ -46,7 +46,7 @@ export interface ArchitecturePatterns {
 }
 
 export interface ProjectStructure {
-  [key: string]: any;
+  [directoryName: string]: ProjectStructure | string[] | undefined;
   _files?: string[];
 }
 
@@ -63,28 +63,7 @@ export interface VectorSearchResult {
   similarity: number;
 }
 
-export interface StreamResponse {
-  output: any;
-  filesReferences?: FileReference[];
-  context?: ProjectContext;
-  originalCode?: string;
-  relevantFiles?: string[];
-}
-
 export type ImprovementType = 'performance' | 'readability' | 'security' | 'optimization';
 
 export type IntentType = 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'debug' | 'refactor' | 'explain';
 
-export interface CodeGenerationRequirements {
-  framework?: string;
-  language?: string;
-  features?: string[];
-  constraints?: string[];
-}
-
-export interface ImprovementRequirements {
-  code: string;
-  improvementGoals: string;
-  projectId: string;
-  improvementType: 'performance' | 'readability' | 'security' | 'optimization';
-}

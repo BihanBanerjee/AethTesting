@@ -16,7 +16,10 @@ export function buildProjectStructure(files: DatabaseFile[]): string {
       } else {
         // It's a directory
         if (!current[part]) current[part] = {};
-        current = current[part];
+        const next = current[part];
+        if (next && typeof next === 'object' && !Array.isArray(next)) {
+          current = next;
+        }
       }
     });
   });
@@ -39,7 +42,10 @@ export function formatStructure(obj: ProjectStructure, indent = 0): string {
       }
     } else {
       result += `${spaces}${key}/\n`;
-      result += formatStructure(obj[key], indent + 1);
+      const subStructure = obj[key];
+      if (subStructure && typeof subStructure === 'object' && !Array.isArray(subStructure)) {
+        result += formatStructure(subStructure, indent + 1);
+      }
     }
   });
   
