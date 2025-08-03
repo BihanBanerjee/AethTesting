@@ -2,11 +2,12 @@
 
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { QAProvider, useQAContext } from '@/contexts/qa-context';
+import { DashboardProvider } from '@/contexts/dashboard-context';
 import useProject from '@/hooks/use-project';
-import { api } from '@/trpc/react';
 
 // Import modularized components
 import QuestionsTab from './components/questions-tab/questions-tab';
@@ -18,82 +19,27 @@ import { AdvancedAnalyticsOverview } from './components/advanced-analytics';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Question } from './types/question';
 
-const EnhancedQAPage: React.FC = () => {
+const EnhancedQAPageContent: React.FC = () => {
   const { projectId } = useProject();
-  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
-  const [filters, setFilters] = useState({
-    intent: undefined as 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain' | undefined,
-    timeRange: 'all' as 'day' | 'week' | 'month' | 'all',
-    sortBy: 'createdAt' as 'createdAt' | 'satisfaction' | 'confidence',
-    sortOrder: 'desc' as 'asc' | 'desc'
-  });
-  const [activeTab, setActiveTab] = useState('questions');
-  const [analyticsMode, setAnalyticsMode] = useState<'basic' | 'advanced'>('basic');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null);
-
-  // Enhanced query with filters
-  const { data: questionsData, isLoading, refetch } = api.project.getQuestions.useQuery({
-    projectId,
-    intent: filters.intent,
-    timeRange: filters.timeRange,
-    sortBy: filters.sortBy,
-    sortOrder: filters.sortOrder
-  });
-
-  // Get statistics
-  const { data: statistics } = api.project.getQuestionStatistics.useQuery({
-    projectId,
-    timeRange: filters.timeRange
-  });
-
-  // Delete question mutation
-  const deleteQuestionMutation = api.project.deleteQuestion.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
-    onError: (error) => {
-      console.error('Failed to delete question:', error);
-    }
-  });
-
-  const questions = (questionsData?.questions || []) as Question[];
-  const selectedQuestion = selectedQuestionIndex !== null ? questions[selectedQuestionIndex] : null;
-
-  const openQuestion = (index: number) => {
-    setSelectedQuestionIndex(index);
-  };
-
-  const closeQuestion = () => {
-    setSelectedQuestionIndex(null);
-  };
-
-  const handleDeleteQuestion = (questionId: string) => {
-    setQuestionToDelete(questionId);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (questionToDelete) {
-      deleteQuestionMutation.mutate({ questionId: questionToDelete });
-    }
-    setDeleteDialogOpen(false);
-    setQuestionToDelete(null);
-  };
-
-  const cancelDelete = () => {
-    setDeleteDialogOpen(false);
-    setQuestionToDelete(null);
-  };
-
-  const handleFilterChange = (newFilters: {
-    intent?: 'question' | 'code_generation' | 'code_improvement' | 'code_review' | 'refactor' | 'debug' | 'explain' | undefined;
-    timeRange?: 'day' | 'week' | 'month' | 'all';
-    sortBy?: 'createdAt' | 'satisfaction' | 'confidence';
-    sortOrder?: 'asc' | 'desc';
-  }) => {
-    setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
-  };
+  const {
+    questions,
+    statistics,
+    isLoading,
+    selectedQuestion,
+    filters,
+    handleFilterChange,
+    activeTab,
+    analyticsMode,
+    deleteDialogOpen,
+    setActiveTab,
+    setAnalyticsMode,
+    setDeleteDialogOpen,
+    openQuestion,
+    closeQuestion,
+    handleDeleteQuestion,
+    confirmDelete,
+    cancelDelete,
+  } = useQAContext();
 
   if (isLoading) {
     return (
@@ -179,6 +125,16 @@ const EnhancedQAPage: React.FC = () => {
       {/* Custom scrollbar styles */}
       <ScrollbarStyles />
     </>
+  );
+};
+
+const EnhancedQAPage: React.FC = () => {
+  return (
+    <DashboardProvider>
+      <QAProvider>
+        <EnhancedQAPageContent />
+      </QAProvider>
+    </DashboardProvider>
   );
 };
 

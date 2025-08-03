@@ -17,6 +17,7 @@ import MeetingLoader from './meeting-loader'
 const MeetingsPage = () => {
     const { projectId } = useProject()
     const { data: meetings, isLoading } = api.project.getMeetings.useQuery({ projectId }, {
+        enabled: !!projectId,
         refetchInterval: 3000 // Poll every 3 seconds for real-time updates
     })
     const deleteMeeting = api.project.deleteMeeting.useMutation()
