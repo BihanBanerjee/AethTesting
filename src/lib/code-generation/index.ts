@@ -4,8 +4,7 @@ export { UnifiedResponseAdapter } from "./unified-response-adapter";
 export type { 
   CodeGenerationRequest, 
   CodeGenerationResult, 
-  GeneratedFile, 
-  ProjectContext 
+  GeneratedFile
 } from "./types";
 export type {
   UnifiedResponse,

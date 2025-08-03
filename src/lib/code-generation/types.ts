@@ -27,29 +27,3 @@ export interface GeneratedFile {
   insertionPoint?: { line: number; column: number };
 }
 
-export interface ProjectContext {
-  relevantFiles: Array<{
-    fileName: string;
-    summary: string;
-    sourceCode: string;
-    type: string;
-    exports: string[];
-    imports: string[];
-  }>;
-  techStack: string[];
-  architecturePattern: string;
-  codingStandards: CodingStandards;
-  projectStructure: string;
-}
-
-export interface CodingStandards {
-  indentation: string;
-  quotes: string;
-  semicolons: boolean;
-  trailingCommas: boolean;
-  maxLineLength: number;
-}
-
-export interface GenerationStrategy {
-  generateCode(request: CodeGenerationRequest, context: ProjectContext): Promise<CodeGenerationResult>;
-}
