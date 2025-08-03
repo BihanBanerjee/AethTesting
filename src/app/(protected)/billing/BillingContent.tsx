@@ -2,41 +2,31 @@
 'use client'
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { createCheckOutSession } from '@/lib/stripe';
-import { api } from '@/trpc/react'
 import { CreditCard, Info } from 'lucide-react';
-import React, { useState, useEffect } from 'react'
+import React, { useCallback } from 'react'
 import { motion } from 'framer-motion';
 import { GlassmorphicCard, GlassmorphicCardHeader, GlassmorphicCardTitle } from '@/components/ui/glassmorphic-card';
-import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
-import useRefetch from '@/hooks/use-refetch';
+import { useBillingComposition } from '@/hooks/billing';
 
-const BillingContent = () => {
-    const searchParams = useSearchParams();
-    const paymentStatus = searchParams.get('payment_status');
-    
-    const { data: user } = api.project.getMyCredits.useQuery();
-    const refetch = useRefetch();
-    const [creditsToBuy, setCreditsToBuy] = useState<number[]>([100])
-    const creditsToBuyAmount = creditsToBuy[0]!
-    const price = (creditsToBuyAmount / 50).toFixed(2);
-    
-    // Handle successful payment return
-    useEffect(() => {
-        if (paymentStatus === 'success') {
-            // Refetch user credits data
-            refetch();
-            
-            // Show success toast
-            toast.success('Payment successful');
-            
-            // Clean up URL (remove query parameter)
-            const url = new URL(window.location.href);
-            url.searchParams.delete('payment_status');
-            window.history.replaceState({}, '', url.toString());
-        }
-    }, [paymentStatus, refetch]);
+const BillingContent = React.memo(() => {
+    const {
+        creditsToBuy,
+        price,
+        setCreditsToBuy,
+        userCredits,
+        isLoadingCredits,
+        purchaseCredits,
+    } = useBillingComposition();
+
+    // Memoized slider handler to prevent unnecessary re-renders
+    const handleSliderChange = useCallback((value: number[]) => {
+        setCreditsToBuy(value[0]!);
+    }, [setCreditsToBuy]);
+
+    // Memoized purchase handler
+    const handlePurchase = useCallback(() => {
+        purchaseCredits();
+    }, [purchaseCredits]);
 
     return (
         <div className="max-w-3xl mx-auto text-white">
@@ -58,12 +48,14 @@ const BillingContent = () => {
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-white/70">Available Credits</span>
-                            <span className="text-2xl font-bold text-white">{user?.credits || 0}</span>
+                            <span className="text-2xl font-bold text-white">
+                                {isLoadingCredits ? '...' : userCredits}
+                            </span>
                         </div>
                         <div className="w-full bg-white/10 h-3 rounded-full overflow-hidden">
                             <div 
                                 className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full" 
-                                style={{ width: `${Math.min(100, ((user?.credits || 0) / 10))}%` }}
+                                style={{ width: `${Math.min(100, (userCredits / 10))}%` }}
                             ></div>
                         </div>
                     </div>
@@ -86,12 +78,12 @@ const BillingContent = () => {
                         <div className="mb-6">
                             <div className="flex justify-between mb-2">
                                 <span className="text-white/70">Amount to purchase</span>
-                                <span className="font-semibold text-white">{creditsToBuyAmount} credits</span>
+                                <span className="font-semibold text-white">{creditsToBuy} credits</span>
                             </div>
                             <Slider 
                                 defaultValue={[100]} 
-                                value={creditsToBuy} 
-                                onValueChange={value => setCreditsToBuy(value)} 
+                                value={[creditsToBuy]} 
+                                onValueChange={handleSliderChange} 
                                 max={1000} 
                                 min={10} 
                                 step={10}
@@ -109,13 +101,11 @@ const BillingContent = () => {
                                 <p className="text-2xl font-bold">${price}</p>
                             </div>
                             <Button 
-                                onClick={() => {
-                                    createCheckOutSession(creditsToBuyAmount)
-                                }}
+                                onClick={handlePurchase}
                                 className="bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-700 hover:to-indigo-900"
                                 size="lg"
                             >
-                                Buy {creditsToBuyAmount} credits
+                                Buy {creditsToBuy} credits
                             </Button>
                         </div>
                     </div>
@@ -128,6 +118,8 @@ const BillingContent = () => {
             </div>
         </div>
     )
-}
+});
+
+BillingContent.displayName = 'BillingContent';
 
 export default BillingContent

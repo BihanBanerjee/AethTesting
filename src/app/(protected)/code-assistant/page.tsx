@@ -19,8 +19,7 @@ import { IntentClassifierProvider } from '@/components/code-assistant/intent-cla
 import { GlassmorphicCard } from '@/components/ui/glassmorphic-card';
 
 // Hooks
-import { useCodeAssistant } from '@/hooks/use-code-assistant';
-import { api } from '@/trpc/react';
+import { useCodeAssistantComposition } from '@/hooks/code-assistant';
 
 const CodeAssistantPageContent = () => {
   const {
@@ -48,11 +47,13 @@ const CodeAssistantPageContent = () => {
     
     // Project context
     project,
-    projectContext
-  } = useCodeAssistant();
+    projectContext,
+    
+    // Code generation integration
+    codeGeneration
+  } = useCodeAssistantComposition();
 
-  // Use the unified askQuestionWithIntent mutation instead of deprecated generateCode
-  const generateCodeMutation = api.project.askQuestionWithIntent.useMutation();
+  // Note: All API calls now go through codeGeneration hook (unified architecture)
 
 
   const handleRemoveFile = (file: string) => {
@@ -133,59 +134,8 @@ const CodeAssistantPageContent = () => {
           <CodeGenerationPanel
             projectId={project?.id || ''}
             availableFiles={availableFiles}
-            onGenerate={async (request) => {
-              // Use the mutation hook that's defined at the top level
-              const result = await generateCodeMutation.mutateAsync({
-                projectId: project!.id,
-                query: request.prompt,
-                intent: 'code_generation',
-                requirements: {
-                  framework: request.framework,
-                  language: request.language
-                }
-              });
-
-              // Always prefer files content if available, regardless of length
-              const fullContent = ((result as any).files && (result as any).files.length > 0 && (result as any).files[0]?.content) 
-                ? (result as any).files[0].content 
-                : (result as any).generatedCode || '';
-              
-              const isUsingFilesContent = !!((result as any).files && (result as any).files.length > 0 && (result as any).files[0]?.content);
-              
-              const filename = ((result as any).files && (result as any).files.length > 0 && (result as any).files[0])
-                ? ((result as any).files[0].fileName || (result as any).files[0].path || 'generated-file')
-                : `generated-${request.type}.${request.language === 'typescript' ? 'ts' : 'js'}`;
-              
-              console.log('🔍 CODE GENERATION TAB: Content sources:', {
-                filesAvailable: (result as any).files?.length || 0,
-                firstFileContentLength: (result as any).files?.[0]?.content?.length || 0,
-                generatedCodeLength: (result as any).generatedCode?.length || 0,
-                usingFilesContent: isUsingFilesContent,
-                finalContentLength: fullContent?.length || 0,
-                filesContentPreview: (result as any).files?.[0]?.content?.substring(0, 100) + '...',
-                generatedCodePreview: (result as any).generatedCode?.substring(0, 100) + '...'
-              });
-
-              return {
-                id: Date.now().toString(),
-                type: request.type,
-                generatedCode: fullContent,
-                explanation: (result as any).explanation || '',
-                filename: filename,
-                language: (result as any).language || 'typescript',
-                confidence: 85,
-                suggestions: []
-              };
-            }}
-            onApplyChanges={async (result) => {
-              // Mock implementation for applying changes
-              console.log('Applying changes:', result);
-              // In a real implementation, you would:
-              // 1. Create a new file or update existing one
-              // 2. Update the project structure
-              // 3. Refresh the file list
-              return Promise.resolve();
-            }}
+            onGenerate={codeGeneration.generateCode}
+            onApplyChanges={codeGeneration.applyChanges}
           />
         </TabsContent>
 
