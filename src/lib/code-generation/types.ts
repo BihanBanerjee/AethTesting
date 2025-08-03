@@ -1,5 +1,5 @@
 // src/lib/code-generation/types.ts
-import type { QueryIntent } from "../intent-classifier";
+import type { QueryIntent } from "../intent-classifier/types";
 
 export interface CodeGenerationRequest {
   intent: QueryIntent;

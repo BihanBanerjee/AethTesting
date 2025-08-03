@@ -1,7 +1,6 @@
 // src/lib/code-generation/unified-response-adapter.ts
 import type { CodeGenerationResult } from "./types";
 import type { UnifiedResponse, FileReference, Suggestion } from "./response-types";
-import { MessageClassifier } from "./message-classifier";
 
 /**
  * Adapter to transform CodeGenerationResult to UnifiedResponse format
@@ -28,8 +27,8 @@ export class UnifiedResponseAdapter {
       explanation: result.explanation,
       suggestions: this.transformWarningsToSuggestions(result.warnings || []),
       files: this.transformGeneratedFiles(result.files),
-      warnings: MessageClassifier.filterUserFacingWarnings(result.warnings || []),
-      insights: MessageClassifier.extractInsights(result.warnings || []),
+      warnings: this.filterUserFacingWarnings(result.warnings || []),
+      insights: this.extractInsights(result.warnings || []),
       dependencies: result.dependencies || [],
       diff: primaryFile?.diff
     };
@@ -118,7 +117,7 @@ export class UnifiedResponseAdapter {
     }
 
     // Default based on file content
-    if (result.files.length > 0 && result.files[0].content) {
+    if (result.files && result.files.length > 0 && result.files[0]?.content) {
       return 'code';
     }
 
@@ -128,7 +127,7 @@ export class UnifiedResponseAdapter {
   /**
    * Transform GeneratedFile[] to FileReference[]
    */
-  private static transformGeneratedFiles(files: Array<{ path: string; content: string; language: string; changeType: string; }>): FileReference[] {
+  private static transformGeneratedFiles(files: Array<{ path: string; content: string; language: string; changeType: string; }> = []): FileReference[] {
     return files.map(file => ({
       path: file.path,
       fileName: file.path.split('/').pop() || file.path,
@@ -143,7 +142,7 @@ export class UnifiedResponseAdapter {
    */
   private static transformWarningsToSuggestions(warnings: string[]): Suggestion[] {
     // Filter to only get actionable suggestions, avoid duplicating warnings
-    const suggestionMessages = MessageClassifier.filterUserFacingSuggestions(warnings);
+    const suggestionMessages = this.filterUserFacingSuggestions(warnings);
     
     return suggestionMessages.map(message => ({
       type: 'improvement' as const,
@@ -201,5 +200,41 @@ export class UnifiedResponseAdapter {
     }
 
     return suggestions;
+  }
+
+  /**
+   * Filter warnings to only user-facing ones (inline implementation)
+   */
+  private static filterUserFacingWarnings(warnings: string[]): string[] {
+    return warnings.filter(warning => 
+      !warning.toLowerCase().includes('internal') &&
+      !warning.toLowerCase().includes('debug') &&
+      warning.length > 10 // Filter out very short warnings
+    );
+  }
+
+  /**
+   * Extract insights from warnings (inline implementation)
+   */
+  private static extractInsights(warnings: string[]): string[] {
+    return warnings
+      .filter(warning => 
+        warning.toLowerCase().includes('recommend') ||
+        warning.toLowerCase().includes('consider') ||
+        warning.toLowerCase().includes('suggest')
+      )
+      .slice(0, 3); // Limit to top 3 insights
+  }
+
+  /**
+   * Filter to actionable suggestions (inline implementation)
+   */
+  private static filterUserFacingSuggestions(warnings: string[]): string[] {
+    return warnings.filter(warning =>
+      warning.toLowerCase().includes('should') ||
+      warning.toLowerCase().includes('could') ||
+      warning.toLowerCase().includes('try') ||
+      warning.toLowerCase().includes('consider')
+    );
   }
 }
