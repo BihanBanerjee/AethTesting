@@ -23,27 +23,38 @@ export const ResultTabs: React.FC<ResultTabsProps> = ({
     setApplied(true);
     // Auto-save applied status if we have a code generation ID
     if (result.id) {
-      await saveCodeGenerationFeedback(result.id, { applied: true });
+      try {
+        await saveCodeGenerationFeedback(result.id, { applied: true });
+      } catch (error) {
+        console.warn('Failed to save applied status:', error);
+      }
     }
   };
 
   const handleSatisfactionChange = async (newSatisfaction: number) => {
     setSatisfaction(newSatisfaction);
     if (result.id) {
-      await saveCodeGenerationFeedback(result.id, { satisfaction: newSatisfaction });
+      try {
+        await saveCodeGenerationFeedback(result.id, { satisfaction: newSatisfaction });
+      } catch (error) {
+        console.warn('Failed to save satisfaction rating:', error);
+      }
     }
   };
 
   const handleModifiedChange = async (isModified: boolean) => {
     setModified(isModified);
     if (result.id) {
-      await saveCodeGenerationFeedback(result.id, { modified: isModified });
+      try {
+        await saveCodeGenerationFeedback(result.id, { modified: isModified });
+      } catch (error) {
+        console.warn('Failed to save modified status:', error);
+      }
     }
   };
 
   // Determine the number of tabs to set the correct grid columns
   const hasOriginalCode = !!result.originalCode;
-  const tabCount = hasOriginalCode ? 3 : 2;
   const gridClass = hasOriginalCode ? 'grid-cols-3' : 'grid-cols-2';
 
   return (

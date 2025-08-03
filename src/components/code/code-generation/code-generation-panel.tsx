@@ -85,15 +85,6 @@ const loadCodeGenFromStorage = (key: string): PersistedCodeGenState | null => {
   return null;
 };
 
-const clearCodeGenFromStorage = (key: string) => {
-  try {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(key);
-    }
-  } catch (error) {
-    console.error('Error clearing code generation results from localStorage:', error);
-  }
-};
 
 // Smart auto-detection for language based on file extension and context
 const detectLanguageFromFile = (filename?: string, prompt?: string): string => {
