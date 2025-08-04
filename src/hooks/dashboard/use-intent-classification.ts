@@ -63,7 +63,7 @@ export function useIntentClassification() {
       console.error('Intent classification failed, using default:', error);
       return DEFAULT_INTENT;
     }
-  }, [project?.id]);
+  }, [project?.id, classifyMutation.mutateAsync]);
   
   return {
     // Core functionality

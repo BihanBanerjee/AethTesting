@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuestionInput } from './use-question-input';
 import { useResponseState } from './use-response-state';
 import { useQuestionUIState } from './use-question-ui-state';
 import { useUnifiedFileSelection } from '../use-unified-file-selection';
+import useProject from '@/hooks/use-project';
 import type { QuestionState, EnhancedResponse, ActiveTab, ProcessingStage } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import type { QueryIntent } from '@/lib/intent-classifier';
 
@@ -25,10 +26,38 @@ export interface DashboardComposition {
 }
 
 export function useDashboardComposition(): DashboardComposition {
+  const { project } = useProject();
   const questionInput = useQuestionInput();
   const responseState = useResponseState() as ReturnType<typeof useResponseState> & { persistState: (question: string, selectedFiles: string[]) => void };
   const uiState = useQuestionUIState();
   const fileSelection = useUnifiedFileSelection();
+
+  // Track project changes for cleanup
+  const previousProjectIdRef = useRef<string | null>(null);
+
+  // Clear state when project changes
+  useEffect(() => {
+    const currentProjectId = project?.id || null;
+    const previousProjectId = previousProjectIdRef.current;
+
+    // If project changed (and it's not the initial load)
+    if (previousProjectId && previousProjectId !== currentProjectId) {
+      console.log('🔄 Project changed, clearing dashboard state:', { 
+        from: previousProjectId, 
+        to: currentProjectId 
+      });
+      
+      // Clear all state
+      questionInput.clearQuestion();
+      responseState.clearResponse();
+      uiState.closeAllModals();
+      fileSelection.clearSelection();
+      responseState.clearPersistedState();
+    }
+
+    // Update the ref for next comparison
+    previousProjectIdRef.current = currentProjectId;
+  }, [project?.id, questionInput.clearQuestion, responseState.clearResponse, responseState.clearPersistedState, uiState.closeAllModals, fileSelection.clearSelection]);
 
   // Restore persisted state on mount (only once)
   useEffect(() => {

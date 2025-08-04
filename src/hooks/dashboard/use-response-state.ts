@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
+import useProject from '@/hooks/use-project';
 import type { EnhancedResponse, ActiveTab } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import type { QueryIntent } from '@/lib/intent-classifier';
 
@@ -22,6 +23,11 @@ const saveToLocalStorage = (key: string, value: PersistedResponseState | null) =
     }
   } catch (error) {
     console.error('Error saving to localStorage:', error);
+    
+    // Simple quota exceeded handling - just log and continue
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      console.warn('⚠️ localStorage quota exceeded - response not saved');
+    }
   }
 };
 
@@ -55,10 +61,11 @@ export interface ResponseState {
 
 export function useResponseState(): ResponseState {
   const { user, isLoaded } = useUser();
+  const { project } = useProject();
   
   const storageKey = useMemo(() => 
-    isLoaded && user?.id ? `Aetheria-askResponse-${user.id}` : null, 
-    [isLoaded, user?.id]
+    isLoaded && user?.id && project?.id ? `Aetheria-askResponse-${user.id}-${project.id}` : null, 
+    [isLoaded, user?.id, project?.id]
   );
   
   const [isRestoring, setIsRestoring] = useState(false);
