@@ -5,9 +5,8 @@ import type { ReactNode } from 'react';
 import { useDashboardComposition } from '@/hooks/dashboard';
 import type { DashboardComposition } from '@/hooks/dashboard';
 
-interface DashboardContextType extends DashboardComposition {}
 
-const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
+const DashboardContext = createContext<DashboardComposition | undefined>(undefined);
 
 export interface DashboardProviderProps {
   children: ReactNode;
@@ -26,7 +25,7 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
   );
 }
 
-export function useDashboardContext(): DashboardContextType {
+export function useDashboardContext(): DashboardComposition {
   const context = useContext(DashboardContext);
   if (context === undefined) {
     throw new Error('useDashboardContext must be used within a DashboardProvider');

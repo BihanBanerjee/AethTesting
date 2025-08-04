@@ -5,9 +5,8 @@ import type { ReactNode } from 'react';
 import { useCodeAssistantComposition } from '@/hooks/code-assistant';
 import type { CodeAssistantComposition } from '@/hooks/code-assistant';
 
-interface CodeAssistantContextType extends CodeAssistantComposition {}
 
-const CodeAssistantContext = createContext<CodeAssistantContextType | undefined>(undefined);
+const CodeAssistantContext = createContext<CodeAssistantComposition | undefined>(undefined);
 
 export interface CodeAssistantProviderProps {
   children: ReactNode;
@@ -26,7 +25,7 @@ export function CodeAssistantProvider({ children }: CodeAssistantProviderProps) 
   );
 }
 
-export function useCodeAssistantContext(): CodeAssistantContextType {
+export function useCodeAssistantContext(): CodeAssistantComposition {
   const context = useContext(CodeAssistantContext);
   if (context === undefined) {
     throw new Error('useCodeAssistantContext must be used within a CodeAssistantProvider');

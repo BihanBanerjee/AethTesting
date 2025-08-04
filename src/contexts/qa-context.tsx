@@ -5,9 +5,8 @@ import type { ReactNode } from 'react';
 import { useQAComposition } from '@/hooks/qa';
 import type { QAComposition } from '@/hooks/qa';
 
-interface QAContextType extends QAComposition {}
 
-const QAContext = createContext<QAContextType | undefined>(undefined);
+const QAContext = createContext<QAComposition | undefined>(undefined);
 
 export interface QAProviderProps {
   children: ReactNode;
@@ -26,7 +25,7 @@ export function QAProvider({ children }: QAProviderProps) {
   );
 }
 
-export function useQAContext(): QAContextType {
+export function useQAContext(): QAComposition {
   const context = useContext(QAContext);
   if (context === undefined) {
     throw new Error('useQAContext must be used within a QAProvider');
