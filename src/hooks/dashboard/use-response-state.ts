@@ -56,7 +56,7 @@ export interface ResponseState {
   setStreamingContent: (content: string) => void;
   clearResponse: () => void;
   clearPersistedState: () => void;
-  restorePersistedState: (question: string, selectedFiles: string[]) => boolean;
+  restorePersistedState: () => { question: string; selectedFiles: string[] } | null;
 }
 
 export function useResponseState(): ResponseState {
@@ -83,7 +83,7 @@ export function useResponseState(): ResponseState {
     }
   }, [storageKey]);
 
-  const restorePersistedState = useCallback((): boolean => {
+  const restorePersistedState = useCallback((): { question: string; selectedFiles: string[] } | null => {
     if (storageKey && !hasRestoredRef.current) {
       console.log('🔄 Restoration check - loading from localStorage:', { storageKey });
       
@@ -97,13 +97,16 @@ export function useResponseState(): ResponseState {
         setIntentPreview(persistedData.intentPreview || null);
         setIsRestoring(false);
         hasRestoredRef.current = true;
-        return true;
+        return {
+          question: persistedData.question || '',
+          selectedFiles: persistedData.selectedFiles || []
+        };
       } else {
         console.log('❌ No persisted state found');
       }
       hasRestoredRef.current = true;
     }
-    return false;
+    return null;
   }, [storageKey]);
 
   const lastResponseRef = useRef<EnhancedResponse | null>(null);

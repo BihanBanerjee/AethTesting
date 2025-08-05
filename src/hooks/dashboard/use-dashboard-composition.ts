@@ -61,7 +61,12 @@ export function useDashboardComposition(): DashboardComposition {
 
   // Restore persisted state on mount (only once)
   useEffect(() => {
-    responseState.restorePersistedState(questionInput.question, fileSelection.selectedFiles);
+    const restoredData = responseState.restorePersistedState();
+    if (restoredData) {
+      console.log('🔄 Restoring question and file selection:', restoredData);
+      questionInput.setQuestion(restoredData.question);
+      fileSelection.setSelectedFiles(restoredData.selectedFiles);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responseState.restorePersistedState]);
 
