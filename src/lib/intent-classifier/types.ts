@@ -6,12 +6,3 @@ export interface QueryIntent {
   requiresFileModification: boolean;
   contextNeeded: 'file' | 'function' | 'project' | 'global';
 }
-
-export interface ClassificationContext {
-  availableFiles?: string[];
-}
-
-export interface FallbackClassificationResult extends QueryIntent {
-  method: 'fallback';
-  matchedPatterns: string[];
-}

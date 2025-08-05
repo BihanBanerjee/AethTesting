@@ -39,8 +39,5 @@ export class IntentClassifier {
   }
 }
 
-// Export types and components
-export type { QueryIntent, ClassificationContext } from "./types";
-export { AIClassifier } from "./ai-classifier";
-export { FallbackClassifier } from "./fallback-classifier";
-export { FileAnalyzer } from "./file-analyzer";
+// Export types 
+export type { QueryIntent } from "./types";

@@ -1,28 +1,11 @@
 // src/app/(protected)/dashboard/code-references/utils/file-processor.ts
-import type { EnhancedFileReference } from '../types/file-reference';
-import { determineFileType, isGeneratedFile } from './file-type-detector';
+// Backward compatibility re-export to maintain existing imports
+// All functionality moved to @/lib/response-processing for better organization
 
-export function processFileReferences(files: any[]): EnhancedFileReference[] {
-  return files.map(file => {
-    const fileName = file.fileName;
-    const fileType = determineFileType(fileName);
-    const isGenerated = isGeneratedFile(fileType);
-    
-    return {
-      fileName,
-      sourceCode: file.sourceCode,
-      summary: file.summary,
-      fileType,
-      isGenerated
-    };
-  });
-}
+export { 
+  processFileReferences, 
+  groupFilesByType 
+} from '@/lib/response-processing/file-processor';
 
-export function groupFilesByType(files: EnhancedFileReference[]): Record<string, EnhancedFileReference[]> {
-  return files.reduce((groups, file) => {
-    const key = file.isGenerated ? 'generated' : 'original';
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(file);
-    return groups;
-  }, {} as Record<string, EnhancedFileReference[]>);
-}
+// Re-export types for convenience
+export type { EnhancedFileReference } from '@/lib/response-processing/types/file-reference';

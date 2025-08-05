@@ -1,4 +1,5 @@
-import type { SuggestionPrediction, QueryIntent, ProjectContext } from '../types/smart-input-suggestion.types';
+import type { SuggestionPrediction, ProjectContext } from '../types/smart-input-suggestion.types';
+import type { QueryIntent } from '@/lib/intent-classifier';
 import { INTENT_ICONS } from '../constants/suggestion-icons';
 
 export function generateSuggestions(

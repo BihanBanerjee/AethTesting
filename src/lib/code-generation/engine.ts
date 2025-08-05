@@ -63,14 +63,71 @@ export class CodeGenerationEngine {
       changeType: 'create' as const
     }));
 
-    // Extract explanation (everything outside code blocks)
+    // Extract explanation (everything outside code blocks) - moved up to fix variable scope
     let explanation = content.replace(codeBlockRegex, '').trim();
+
+    // SMART HANDLING: For ALL intents, detect and fix fragmented markdown files
+    if (matches.length > 1) {
+      const isMarkdownBlocks = matches.every(match => 
+        !match[1] || match[1].toLowerCase() === 'markdown' || match[1].toLowerCase() === 'md'
+      );
+      
+      if (isMarkdownBlocks) {
+        // Conservative detection: only combine if we detect clear fragmentation patterns
+        const hasFragmentationPatterns = matches.some(match => {
+          const content = match[2]?.trim() || '';
+          return content.startsWith('2. **') ||     // Step continuation
+                 content.startsWith('3. **') ||     // Step continuation
+                 content.startsWith('4. **') ||     // Step continuation
+                 content.startsWith('5. **') ||     // Step continuation
+                 content.startsWith('6. **') ||     // Step continuation
+                 content.length < 100 ||            // Very short blocks
+                 (!content.includes('# ') && content.length > 0); // No main headers but has content
+        });
+        
+        if (hasFragmentationPatterns) {
+          const combinedContent = matches.map(match => match[2]?.trim() || '').join('\n\n');
+          
+          // Determine appropriate filename based on intent and content
+          let filename = 'generated_document.md';
+          let successMessage = 'Markdown document generated successfully';
+          
+          if (intentType === 'code_improvement' || combinedContent.toLowerCase().includes('readme')) {
+            filename = 'README.md';
+            successMessage = 'README file improved successfully';
+          } else if (combinedContent.toLowerCase().includes('contributing')) {
+            filename = 'CONTRIBUTING.md';
+            successMessage = 'Contributing guide generated successfully';
+          } else if (combinedContent.toLowerCase().includes('license')) {
+            filename = 'LICENSE.md';
+            successMessage = 'License file generated successfully';
+          } else if (intentType === 'debug') {
+            filename = 'TROUBLESHOOTING.md';
+            successMessage = 'Troubleshooting guide generated successfully';
+          }
+          
+          return {
+            type: 'new_file' as const,
+            files: [{
+              path: filename,
+              content: combinedContent,
+              language: 'markdown',
+              changeType: 'create' as const
+            }],
+            explanation: explanation || successMessage,
+            warnings: [],
+            dependencies: this.extractDependencies(content)
+          };
+        }
+        // If no fragmentation patterns detected, continue with normal multi-file processing
+      }
+    }
     
     // Clean up extra whitespace
     explanation = explanation.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
     return {
-      type: files.length > 1 ? 'multiple_files' : files.length === 1 ? 'new_file' : 'code_snippet',
+      type: files.length > 1 ? 'multiple_files' as const : files.length === 1 ? 'new_file' as const : 'code_snippet' as const,
       files,
       explanation: explanation || 'Code generated successfully',
       warnings: [],

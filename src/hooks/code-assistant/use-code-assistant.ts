@@ -87,9 +87,6 @@ export function useCodeAssistant(): CodeAssistantHookReturn {
       processingState.setProgress(100);
 
       const extractedContent = extractResponseContent(response);
-      console.log('🔍 FRONTEND: Extracted content:', extractedContent);
-      console.log('🔍 FRONTEND: Extracted content type:', typeof extractedContent);
-      console.log('🔍 FRONTEND: Extracted content length:', typeof extractedContent === 'string' ? extractedContent.length : 'Not string');
       
       // Debug: Log raw response structure
       console.log('🔍 FRONTEND: Raw response structure:', {

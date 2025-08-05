@@ -16,17 +16,18 @@ export class FallbackClassifier {
       console.log('🔄 Using fallback intent classification for:', query.substring(0, 50) + '...');
     }
     
-    // Code generation patterns
+    // Enhanced code generation patterns
     if (this.matchesPatterns(lowerQuery, [
       'create', 'generate', 'write', 'build', 'implement', 'add new',
-      'make a', 'develop', 'code for', 'function that', 'component that'
+      'make a', 'develop', 'code for', 'function that', 'component that',
+      'scaffold', 'boilerplate', 'template', 'new file', 'starter'
     ])) {
       if (typeof window === 'undefined') {
         console.log('✅ Classified as: code_generation (fallback)');
       }
       return {
         type: 'code_generation',
-        confidence: 0.7,
+        confidence: 0.8,
         requiresCodeGen: true,
         requiresFileModification: true,
         contextNeeded: 'project',
@@ -34,17 +35,18 @@ export class FallbackClassifier {
       };
     }
 
-    // Code improvement patterns
+    // Enhanced code improvement patterns
     if (this.matchesPatterns(lowerQuery, [
       'improve', 'optimize', 'enhance', 'better', 'performance',
-      'make faster', 'more efficient', 'cleaner', 'simplify'
+      'make faster', 'more efficient', 'cleaner', 'simplify',
+      'update', 'modernize', 'readme', 'documentation', 'docs'
     ])) {
       if (typeof window === 'undefined') {
         console.log('✅ Classified as: code_improvement (fallback)');
       }
       return {
         type: 'code_improvement',
-        confidence: 0.7,
+        confidence: 0.8,
         requiresCodeGen: true,
         requiresFileModification: true,
         contextNeeded: 'file',
@@ -60,7 +62,7 @@ export class FallbackClassifier {
       console.log('✅ Classified as: refactor (fallback)');
       return {
         type: 'refactor',
-        confidence: 0.7,
+        confidence: 0.8,
         requiresCodeGen: true,
         requiresFileModification: true,
         contextNeeded: 'function',
@@ -76,7 +78,7 @@ export class FallbackClassifier {
       console.log('✅ Classified as: debug (fallback)');
       return {
         type: 'debug',
-        confidence: 0.8,
+        confidence: 0.9,
         requiresCodeGen: false,
         requiresFileModification: false,
         contextNeeded: 'file',
@@ -92,7 +94,7 @@ export class FallbackClassifier {
       console.log('✅ Classified as: code_review (fallback)');
       return {
         type: 'code_review',
-        confidence: 0.7,
+        confidence: 0.8,
         requiresCodeGen: false,
         requiresFileModification: false,
         contextNeeded: 'file',
@@ -108,7 +110,7 @@ export class FallbackClassifier {
       console.log('✅ Classified as: explain (fallback)');
       return {
         type: 'explain',
-        confidence: 0.8,
+        confidence: 0.9,
         requiresCodeGen: false,
         requiresFileModification: false,
         contextNeeded: 'function',
@@ -122,7 +124,7 @@ export class FallbackClassifier {
     }
     return {
       type: 'question',
-      confidence: 0.5,
+      confidence: 0.7,
       requiresCodeGen: false,
       requiresFileModification: false,
       contextNeeded: 'project',
@@ -131,6 +133,16 @@ export class FallbackClassifier {
   }
 
   private matchesPatterns(text: string, patterns: string[]): boolean {
-    return patterns.some(pattern => text.includes(pattern));
+    return patterns.some(pattern => {
+      // Enhanced matching: check for whole words to reduce false positives
+      const regex = new RegExp(`\\b${pattern.replace(/\s+/g, '\\s+')}\\b`, 'i');
+      return regex.test(text) || text.includes(pattern);
+    });
   }
+}
+
+// Export function interface for compatibility with existing code
+export function createFallbackIntent(query: string): QueryIntent {
+  const classifier = new FallbackClassifier();
+  return classifier.classifyQuery(query);
 }

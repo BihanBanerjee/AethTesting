@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { type QueryIntent } from '@/lib/intent-classifier';
 import { api } from '@/trpc/react';
 import { IntentClassifierContext } from '../context/intent-classifier-context';
-import { createFallbackIntent } from '../utils/fallback-classifier';
+import { createFallbackIntent } from '@/lib/intent-classifier/fallback-classifier';
 import type { ProjectContext } from '../types/intent-classifier.types';
 
 export const IntentClassifierProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

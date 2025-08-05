@@ -6,6 +6,6 @@ export { INTENT_ICONS } from '../constants/suggestion-icons';
 export type {
   SmartInputSuggestionsProps,
   SuggestionPrediction,
-  ProjectContext,
-  QueryIntent
+  ProjectContext
 } from '../types/smart-input-suggestion.types';
+export type { QueryIntent } from '@/lib/intent-classifier';

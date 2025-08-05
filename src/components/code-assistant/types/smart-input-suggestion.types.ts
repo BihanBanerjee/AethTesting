@@ -20,9 +20,3 @@ export interface SuggestionPrediction {
   confidence: number;
   icon: ReactNode;
 }
-
-export interface QueryIntent {
-  type: string;
-  confidence: number;
-  targetFiles?: string[];
-}
