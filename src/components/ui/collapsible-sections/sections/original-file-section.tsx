@@ -5,6 +5,7 @@ import { FileText, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
 import { CollapsibleSection } from '../collapsible-section';
+import { copyToClipboard, downloadCode } from '@/lib/intent';
 import type { FileData, SectionPriority } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 
 interface OriginalFileSectionProps {
@@ -22,18 +23,12 @@ export const OriginalFileSection: React.FC<OriginalFileSectionProps> = ({
   priority,
   className
 }) => {
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(fileData.content);
+  const handleCopy = () => {
+    copyToClipboard(fileData.content, `${fileData.filename} copied to clipboard`);
   };
 
-  const downloadFile = () => {
-    const blob = new Blob([fileData.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileData.filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = () => {
+    downloadCode(fileData.content, fileData.filename, `${fileData.filename} downloaded`);
   };
 
   const actions = (
@@ -41,7 +36,7 @@ export const OriginalFileSection: React.FC<OriginalFileSectionProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={copyToClipboard}
+        onClick={handleCopy}
         className="text-white/60 hover:text-white hover:bg-white/10 p-1 h-auto"
         title="Copy file content"
       >
@@ -50,7 +45,7 @@ export const OriginalFileSection: React.FC<OriginalFileSectionProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={downloadFile}
+        onClick={handleDownload}
         className="text-white/60 hover:text-white hover:bg-white/10 p-1 h-auto"
         title="Download file"
       >

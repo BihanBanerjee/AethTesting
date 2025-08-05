@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { CodeContextTab } from '@/components/ui/code-context-tab';
 import { CompactQuestionDisplay } from '@/components/ui/compact-question-display';
+import { copyToClipboard, downloadCode } from '@/lib/intent';
 import type { Question } from '../types/question';
 import type { EnhancedResponse } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 import { getUserDisplayName, getUserImageUrl, getFileReferencesFromQuestion } from '../types/question';
@@ -41,18 +42,13 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('response');
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const handleCopy = (text: string) => {
+    copyToClipboard(text, 'Response copied to clipboard');
   };
 
-  const downloadResponse = (content: string) => {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qa-response-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = (content: string) => {
+    const filename = `qa-response-${Date.now()}.txt`;
+    downloadCode(content, filename, `${filename} downloaded`);
   };
 
   const getResponseTypeIcon = () => {
@@ -177,7 +173,7 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(question.answer)}
+                    onClick={() => handleCopy(question.answer)}
                     className="text-white/60 hover:text-white hover:bg-white/10"
                   >
                     <Copy className="h-4 w-4" />
@@ -185,7 +181,7 @@ export const EnhancedQuestionModal: React.FC<EnhancedQuestionModalProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => downloadResponse(question.answer)}
+                    onClick={() => handleDownload(question.answer)}
                     className="text-white/60 hover:text-white hover:bg-white/10"
                   >
                     <Download className="h-4 w-4" />

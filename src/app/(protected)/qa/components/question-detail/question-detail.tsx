@@ -4,7 +4,7 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Clock, Copy, X, FileText, Code } from 'lucide-react';
-import { toast } from 'sonner';
+import { copyToClipboard } from '@/lib/intent';
 import { AnswerTabContent, CodeTabContent, getClipboardContent } from './tab-content';
 import type { Question } from '../../types/question';
 import { ExpandableQuestionDisplay } from '@/components/ui/expandable-question-display';
@@ -29,23 +29,21 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
   }>({ activeFileIndex: 0 });
   
   // Copy content to clipboard based on active tab
-  const copyToClipboard = () => {
+  const handleCopy = () => {
     try {
       const { content, filename } = getClipboardContent(activeTab, question, codeWrapperRef.current || { activeFileIndex: 0 });
       
       if (content) {
-        navigator.clipboard.writeText(content);
-        if (filename) {
-          toast.success(`Code from ${filename} copied to clipboard`);
-        } else {
-          toast.success(`${activeTab === 'answer' ? 'Answer' : 'Content'} copied to clipboard`);
-        }
+        const message = filename 
+          ? `Code from ${filename} copied to clipboard`
+          : `${activeTab === 'answer' ? 'Answer' : 'Content'} copied to clipboard`;
+        copyToClipboard(content, message);
       } else {
-        toast.error('No content to copy');
+        copyToClipboard('', 'No content to copy');
       }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      toast.error('Failed to copy to clipboard');
+      copyToClipboard('', 'Failed to copy to clipboard');
     }
   };
 
@@ -104,7 +102,7 @@ const QuestionDetail: React.FC<QuestionDetailProps> = ({ question, onClose }) =>
               {new Date(question.createdAt).toLocaleDateString()}
             </div>
             <button 
-              onClick={copyToClipboard}
+              onClick={handleCopy}
               className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
               title="Copy content"
             >

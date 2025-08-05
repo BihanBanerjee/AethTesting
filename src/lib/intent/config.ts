@@ -66,6 +66,3 @@ export const getIntentConfig = (intent: string | null | undefined): IntentConfig
   return INTENT_CONFIGS[normalizedIntent] || INTENT_CONFIGS.question;
 };
 
-export const isValidIntent = (intent: string): intent is IntentType => {
-  return intent in INTENT_CONFIGS;
-};

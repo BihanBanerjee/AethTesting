@@ -9,6 +9,7 @@ import { DiffViewer } from '@/components/code/diff-viewer/index';
 import CodeReferences from '../../code-references';
 // import { EnhancedSaveButton } from '@/components/feedback/enhanced-save-button';
 import { DarkMarkdown } from '@/components/ui/dark-markdown';
+import { copyToClipboard } from '@/lib/intent';
 import type { EnhancedResponse, ActiveTab } from '../types/enhanced-response';
 import { 
   Code, 
@@ -43,9 +44,6 @@ export const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
   const [helpful, setHelpful] = useState<boolean | null>(response.feedback?.helpful ?? null);
   const { saveInteractionFeedback, isLoading: savingFeedback } = useFeedbackPersistence();
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
 
   // Handle feedback changes with immediate persistence
   const handleRatingChange = async (newRating: number) => {
@@ -108,7 +106,7 @@ export const ResponseDisplay: React.FC<ResponseDisplayProps> = ({
         
         <div className="flex items-center gap-2">
           <button
-            onClick={() => copyToClipboard(response.content)}
+            onClick={() => copyToClipboard(response.content, 'Response copied to clipboard')}
             className="p-2 hover:bg-white/10 rounded-md transition-colors"
             title="Copy response"
           >

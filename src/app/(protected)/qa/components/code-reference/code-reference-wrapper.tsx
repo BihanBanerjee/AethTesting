@@ -19,7 +19,7 @@ import {
   Copy, 
   Download 
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { copyToClipboard, downloadCode } from '@/lib/intent';
 
 // Enhanced types
 interface EnhancedFileReference {
@@ -154,20 +154,12 @@ const CodeReferenceWrapper = React.forwardRef<{ activeFileIndex: number }, CodeR
     }
   }, [enhancedFiles, activeFile]);
 
-  const copyToClipboard = (content: string, fileName: string) => {
-    navigator.clipboard.writeText(content);
-    toast.success(`${fileName} copied to clipboard`);
+  const handleCopy = (content: string, fileName: string) => {
+    copyToClipboard(content, `${fileName} copied to clipboard`);
   };
 
-  const downloadFile = (content: string, fileName: string) => {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`${fileName} downloaded`);
+  const handleDownload = (content: string, fileName: string) => {
+    downloadCode(content, fileName, `${fileName} downloaded`);
   };
   
   if (enhancedFiles.length === 0) {
@@ -263,7 +255,7 @@ const CodeReferenceWrapper = React.forwardRef<{ activeFileIndex: number }, CodeR
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(file.sourceCode, file.fileName)}
+                    onClick={() => handleCopy(file.sourceCode, file.fileName)}
                     className="h-6 w-6 p-0 text-white/60 hover:text-white"
                     title="Copy content"
                   >
@@ -272,7 +264,7 @@ const CodeReferenceWrapper = React.forwardRef<{ activeFileIndex: number }, CodeR
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => downloadFile(file.sourceCode, file.fileName)}
+                    onClick={() => handleDownload(file.sourceCode, file.fileName)}
                     className="h-6 w-6 p-0 text-white/60 hover:text-white"
                     title="Download file"
                   >

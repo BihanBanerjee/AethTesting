@@ -5,6 +5,7 @@ import { Code, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EnhancedCodeBlock as CodeBlock } from '@/components/code/code-viewer';
 import { CollapsibleSection } from '../collapsible-section';
+import { copyToClipboard, downloadCode as downloadCodeUtil } from '@/lib/intent';
 import type { CodeData, SectionPriority } from '@/app/(protected)/dashboard/ask-question-card/types/enhanced-response';
 
 interface GeneratedCodeSectionProps {
@@ -22,18 +23,13 @@ export const GeneratedCodeSection: React.FC<GeneratedCodeSectionProps> = ({
   priority,
   className
 }) => {
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(codeData.content);
+  const handleCopy = () => {
+    copyToClipboard(codeData.content, 'Code copied to clipboard');
   };
 
-  const downloadCode = () => {
-    const blob = new Blob([codeData.content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = codeData.filename || `generated-code.${codeData.language === 'typescript' ? 'ts' : codeData.language}`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownload = () => {
+    const fileName = codeData.filename || `generated-code.${codeData.language === 'typescript' ? 'ts' : codeData.language}`;
+    downloadCodeUtil(codeData.content, fileName, `${fileName} downloaded`);
   };
 
   const actions = (
@@ -41,7 +37,7 @@ export const GeneratedCodeSection: React.FC<GeneratedCodeSectionProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={copyToClipboard}
+        onClick={handleCopy}
         className="text-white/60 hover:text-white hover:bg-white/10 p-1 h-auto"
         title="Copy code"
       >
@@ -50,7 +46,7 @@ export const GeneratedCodeSection: React.FC<GeneratedCodeSectionProps> = ({
       <Button
         variant="ghost"
         size="sm"
-        onClick={downloadCode}
+        onClick={handleDownload}
         className="text-white/60 hover:text-white hover:bg-white/10 p-1 h-auto"
         title="Download code"
       >

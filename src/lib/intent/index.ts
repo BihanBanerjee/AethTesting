@@ -7,7 +7,7 @@ export * from './statistics';
 
 // Maintain the original module structure for easier migration
 export { getIntentConfig, type IntentType, type IntentConfig } from './config';
-export { getIntentColor, getIntentEmoji, getIntentLabel } from './shared-utilities';
+export { getIntentColor, getIntentEmoji } from './shared-utilities';
 export { getIntentIcon, copyToClipboard, downloadCode } from './frontend-utilities';
 export { 
   calculateQuestionImpact, 

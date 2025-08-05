@@ -7,6 +7,7 @@ import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Copy, Check, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { copyToClipboard as copyToClipboardUtil, downloadCode as downloadCodeUtil } from '@/lib/intent';
 
 interface DarkCodeBlockProps {
   code: string;
@@ -27,7 +28,7 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      copyToClipboardUtil(code, 'Code copied to clipboard');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -36,13 +37,8 @@ export const DarkCodeBlock: React.FC<DarkCodeBlockProps> = ({
   };
 
   const downloadCode = () => {
-    const blob = new Blob([code], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || `code.${getFileExtension(language)}`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = filename || `code.${getFileExtension(language)}`;
+    downloadCodeUtil(code, fileName, `${fileName} downloaded`);
   };
 
   const getFileExtension = (lang: string): string => {

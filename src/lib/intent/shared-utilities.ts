@@ -11,7 +11,3 @@ export function getIntentEmoji(intent?: string | null): string {
   return config.emoji;
 }
 
-export function getIntentLabel(intent?: string | null): string {
-  const config = getIntentConfig(intent);
-  return config.label;
-}

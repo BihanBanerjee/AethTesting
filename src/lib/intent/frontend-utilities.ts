@@ -44,13 +44,22 @@ export const getIntentIcon = (intent?: string, className: string = "h-4 w-4"): s
   return React.createElement(IconComponent, { className });
 };
 
-export const copyToClipboard = (text: string) => {
+export const copyToClipboard = (text: string, successMessage?: string) => {
   if (typeof navigator !== 'undefined' && navigator.clipboard) {
     navigator.clipboard.writeText(text);
+    if (successMessage && typeof window !== 'undefined') {
+      // Dynamic import to avoid build issues
+      import('sonner').then(({ toast }) => {
+        toast.success(successMessage);
+      }).catch(() => {
+        // Fallback if sonner is not available
+        console.log('Copied to clipboard');
+      });
+    }
   }
 };
 
-export const downloadCode = (code: string, filename: string) => {
+export const downloadCode = (code: string, filename: string, successMessage?: string) => {
   if (typeof window !== 'undefined') {
     const blob = new Blob([code], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -59,5 +68,15 @@ export const downloadCode = (code: string, filename: string) => {
     a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+    
+    if (successMessage) {
+      // Dynamic import to avoid build issues
+      import('sonner').then(({ toast }) => {
+        toast.success(successMessage);
+      }).catch(() => {
+        // Fallback if sonner is not available
+        console.log('Downloaded:', filename);
+      });
+    }
   }
 };
